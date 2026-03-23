@@ -1,0 +1,70 @@
+{
+  "id": "b20d12d1-02e5-4a12-a064-a75bb9f8ede8",
+  "scenario": "Universal Basic Income is global",
+  "departurePoint": "The specific historical moment where reality diverges is unclear - this could represent a gradual adoption starting from current pilot programs, or a coordinated global implementation at a specific point in time.",
+  "baselineData": [],
+  "domainWeights": {
+    "HISTORICAL": 0.7,
+    "ECONOMIC": 1,
+    "POLITICAL": 0.9,
+    "MILITARY": 0.2,
+    "DIPLOMATIC": 0.8,
+    "SOCIAL": 0.9,
+    "TECHNOLOGICAL": 0.6,
+    "ENVIRONMENTAL": 0.4,
+    "CULTURAL": 0.7,
+    "LEGAL": 0.8,
+    "DEMOGRAPHIC": 0.8,
+    "URBAN_PLANNING": 0.5
+  },
+  "activeAgents": [
+    "ECONOMIC",
+    "POLITICAL",
+    "SOCIAL",
+    "DIPLOMATIC",
+    "LEGAL",
+    "DEMOGRAPHIC",
+    "HISTORICAL",
+    "CULTURAL",
+    "TECHNOLOGICAL",
+    "URBAN_PLANNING",
+    "ENVIRONMENTAL"
+  ],
+  "agentOutputs": {},
+  "agentStatus": {
+    "HISTORICAL": "FAILED",
+    "ECONOMIC": "FAILED",
+    "POLITICAL": "FAILED",
+    "MILITARY": "SKIPPED",
+    "DIPLOMATIC": "FAILED",
+    "SOCIAL": "FAILED",
+    "TECHNOLOGICAL": "FAILED",
+    "ENVIRONMENTAL": "FAILED",
+    "CULTURAL": "FAILED",
+    "LEGAL": "FAILED",
+    "DEMOGRAPHIC": "FAILED",
+    "URBAN_PLANNING": "FAILED"
+  },
+  "guardResults": {},
+  "synthesis": null,
+  "safetyResult": {
+    "status": "ALLOWED",
+    "reason": "Legitimate economic policy speculation about global UBI implementation",
+    "disclaimers": []
+  },
+  "cascades": null,
+  "stakeholderDebate": null,
+  "costTracking": {
+    "totalInputTokens": 917,
+    "totalOutputTokens": 571,
+    "inputCostUsd": 0.0028,
+    "outputCostUsd": 0.0086,
+    "searchCalls": 5,
+    "totalCostUsd": 0.0113
+  },
+  "conversation": [],
+  "version": 1,
+  "promptVersion": "v1.0",
+  "createdAt": "2026-03-22T18:09:48.593Z",
+  "updatedAt": "2026-03-22T18:09:48.593Z"
+}

@@ -1,0 +1,32 @@
+{
+  "id": "f00b004d-621a-484f-8ea8-4187a0a437fb",
+  "scenario": "AI becomes sentient in 1995",
+  "departurePoint": "",
+  "baselineData": [],
+  "domainWeights": {},
+  "activeAgents": [],
+  "agentOutputs": {},
+  "agentStatus": {},
+  "guardResults": {},
+  "synthesis": null,
+  "safetyResult": {
+    "status": "BLOCKED",
+    "reason": "Simulation error: Invocation of model ID anthropic.claude-sonnet-4-20250514-v1:0 with on-demand throughput isn’t supported. Retry your request with the ID or ARN of an inference profile that contains this model.",
+    "disclaimers": []
+  },
+  "cascades": null,
+  "stakeholderDebate": null,
+  "costTracking": {
+    "totalInputTokens": 0,
+    "totalOutputTokens": 0,
+    "inputCostUsd": 0,
+    "outputCostUsd": 0,
+    "searchCalls": 0,
+    "totalCostUsd": 0
+  },
+  "conversation": [],
+  "version": 1,
+  "promptVersion": "v1.0",
+  "createdAt": "2026-03-22T17:36:31.687Z",
+  "updatedAt": "2026-03-22T17:36:32.594Z"
+}

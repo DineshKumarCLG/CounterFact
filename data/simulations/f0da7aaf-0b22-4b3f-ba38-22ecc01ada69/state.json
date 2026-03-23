@@ -1,0 +1,143 @@
+{
+  "id": "f0da7aaf-0b22-4b3f-ba38-22ecc01ada69",
+  "scenario": "Universal Basic Income is global",
+  "departurePoint": "The specific historical moment of global UBI implementation is unclear from the scenario description",
+  "baselineData": [],
+  "domainWeights": {
+    "HISTORICAL": 0.6,
+    "ECONOMIC": 1,
+    "POLITICAL": 0.9,
+    "MILITARY": 0.2,
+    "DIPLOMATIC": 0.7,
+    "SOCIAL": 0.9,
+    "TECHNOLOGICAL": 0.4,
+    "ENVIRONMENTAL": 0.3,
+    "CULTURAL": 0.6,
+    "LEGAL": 0.8,
+    "DEMOGRAPHIC": 0.7,
+    "URBAN_PLANNING": 0.4
+  },
+  "activeAgents": [
+    "ECONOMIC",
+    "POLITICAL",
+    "SOCIAL",
+    "LEGAL",
+    "DIPLOMATIC",
+    "DEMOGRAPHIC",
+    "HISTORICAL",
+    "CULTURAL",
+    "TECHNOLOGICAL",
+    "URBAN_PLANNING",
+    "ENVIRONMENTAL"
+  ],
+  "agentOutputs": {
+    "HISTORICAL": {
+      "domain": "HISTORICAL",
+      "findings": "SPECULATIVE ANALYSIS: A global Universal Basic Income implementation would represent an unprecedented transformation in economic policy coordination, lacking direct historical precedent. The closest historical parallels include: (1) The Bretton Woods system (1944), which established coordinated international monetary policy but was limited to currency exchange rather than direct wealth redistribution; (2) The Marshall Plan (1947-1951), which involved massive wealth transfers but was unidirectional from the US to Western Europe and temporary; (3) The creation of social safety nets during the Great Depression, particularly Roosevelt's New Deal (1933-1939) and similar programs in Europe, but these were national rather than global initiatives. Historical precedents for coordinated global policy implementation show mixed results: the Montreal Protocol (1987) succeeded in phasing out ozone-depleting substances through international cooperation, while attempts at global economic coordination like the Plaza Accord (1985) had limited long-term success. The European Union's Common Agricultural Policy (1962-present) demonstrates how wealth redistribution can work across multiple nations, but this involves only 27 countries with shared governance structures. No historical precedent exists for voluntary coordination of direct cash transfers across all sovereign nations simultaneously. The scenario would require overcoming historical patterns where nations prioritize domestic concerns over international coordination, as seen in the failure of the League of Nations (1920-1946) and ongoing challenges in UN coordination. Historical implementation of major social programs typically occurred during crisis periods (wars, depressions) that created political windows for radical change - the specific crisis or catalyst that would enable global UBI coordination is not specified in the scenario.",
+      "keyDatapoints": [
+        {
+          "fact": "Bretton Woods system established international monetary coordination in 1944",
+          "source": "Historical record",
+          "sourceTier": 1,
+          "year": 1944
+        },
+        {
+          "fact": "Marshall Plan involved $13.3 billion in aid (1947-1951)",
+          "source": "Historical record",
+          "sourceTier": 1,
+          "year": 1947
+        },
+        {
+          "fact": "Montreal Protocol achieved global environmental coordination starting 1987",
+          "source": "Historical record",
+          "sourceTier": 1,
+          "year": 1987
+        },
+        {
+          "fact": "EU Common Agricultural Policy demonstrates multi-national wealth redistribution since 1962",
+          "source": "Historical record",
+          "sourceTier": 1,
+          "year": 1962
+        },
+        {
+          "fact": "League of Nations failed to maintain international cooperation (1920-1946)",
+          "source": "Historical record",
+          "sourceTier": 1,
+          "year": 1920
+        }
+      ],
+      "confidence": "SPECULATIVE",
+      "sourceTiers": {
+        "Historical record": 1
+      },
+      "contradictions": [
+        "Economic analysis may assume smoother implementation than historical precedents suggest",
+        "Political analysis may underestimate sovereignty concerns based on historical patterns"
+      ],
+      "cascadeSeeds": [
+        "Crisis event that catalyzes global cooperation",
+        "First-mover nation implementing UBI domestically",
+        "International organization proposing coordination framework",
+        "Major economic disruption requiring coordinated response"
+      ],
+      "visualPrompts": [],
+      "selfCritique": {
+        "sourcesVerified": true,
+        "projectionsLabelled": true,
+        "confidenceHonest": true
+      },
+      "tokenUsage": {
+        "input": 605,
+        "output": 758
+      }
+    }
+  },
+  "agentStatus": {
+    "HISTORICAL": "COMPLETE",
+    "ECONOMIC": "FAILED",
+    "POLITICAL": "FAILED",
+    "MILITARY": "SKIPPED",
+    "DIPLOMATIC": "FAILED",
+    "SOCIAL": "FAILED",
+    "TECHNOLOGICAL": "FAILED",
+    "ENVIRONMENTAL": "FAILED",
+    "CULTURAL": "FAILED",
+    "LEGAL": "FAILED",
+    "DEMOGRAPHIC": "FAILED",
+    "URBAN_PLANNING": "FAILED"
+  },
+  "guardResults": {
+    "HISTORICAL": {
+      "domain": "HISTORICAL",
+      "passed": false,
+      "issues": [
+        "Source citations are too vague - 'Historical record' is not a specific, verifiable source",
+        "Missing specific citations for factual claims like Marshall Plan dollar amount",
+        "All sources labeled as tier 1 despite being generic references",
+        "No bibliographic details provided for verification"
+      ],
+      "sanitised": false
+    }
+  },
+  "synthesis": null,
+  "safetyResult": {
+    "status": "ALLOWED",
+    "reason": "Legitimate economic policy speculation about global UBI implementation",
+    "disclaimers": []
+  },
+  "cascades": null,
+  "stakeholderDebate": null,
+  "costTracking": {
+    "totalInputTokens": 2762,
+    "totalOutputTokens": 1418,
+    "inputCostUsd": 0.0083,
+    "outputCostUsd": 0.0213,
+    "searchCalls": 5,
+    "totalCostUsd": 0.0296
+  },
+  "conversation": [],
+  "version": 1,
+  "promptVersion": "v1.0",
+  "createdAt": "2026-03-22T18:13:20.921Z",
+  "updatedAt": "2026-03-22T18:13:20.921Z"
+}

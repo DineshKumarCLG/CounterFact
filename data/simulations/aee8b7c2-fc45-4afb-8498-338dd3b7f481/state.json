@@ -1,0 +1,32 @@
+{
+  "id": "aee8b7c2-fc45-4afb-8498-338dd3b7f481",
+  "scenario": "AI becomes sentient in 1995",
+  "departurePoint": "",
+  "baselineData": [],
+  "domainWeights": {},
+  "activeAgents": [],
+  "agentOutputs": {},
+  "agentStatus": {},
+  "guardResults": {},
+  "synthesis": null,
+  "safetyResult": {
+    "status": "BLOCKED",
+    "reason": "Not a geopolitical scenario — involves speculative technology/science fiction elements rather than realistic political, territorial, or diplomatic changes",
+    "disclaimers": []
+  },
+  "cascades": null,
+  "stakeholderDebate": null,
+  "costTracking": {
+    "totalInputTokens": 380,
+    "totalOutputTokens": 60,
+    "inputCostUsd": 0.0011,
+    "outputCostUsd": 0.0009,
+    "searchCalls": 0,
+    "totalCostUsd": 0.002
+  },
+  "conversation": [],
+  "version": 1,
+  "promptVersion": "v1.0",
+  "createdAt": "2026-03-22T17:38:36.170Z",
+  "updatedAt": "2026-03-22T17:38:36.170Z"
+}

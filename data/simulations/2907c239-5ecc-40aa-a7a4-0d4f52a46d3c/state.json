@@ -1,0 +1,71 @@
+{
+  "id": "2907c239-5ecc-40aa-a7a4-0d4f52a46d3c",
+  "scenario": "Antarctica is perfectly habitable",
+  "departurePoint": "Geological/climatic conditions that would have prevented Antarctica from becoming ice-covered, potentially dating back millions of years to continental drift patterns or different global climate evolution",
+  "baselineData": [],
+  "domainWeights": {
+    "HISTORICAL": 0.8,
+    "ECONOMIC": 0.9,
+    "POLITICAL": 0.9,
+    "MILITARY": 0.7,
+    "DIPLOMATIC": 0.8,
+    "SOCIAL": 0.6,
+    "TECHNOLOGICAL": 0.4,
+    "ENVIRONMENTAL": 0.9,
+    "CULTURAL": 0.5,
+    "LEGAL": 0.8,
+    "DEMOGRAPHIC": 0.7,
+    "URBAN_PLANNING": 0.6
+  },
+  "activeAgents": [
+    "ECONOMIC",
+    "POLITICAL",
+    "ENVIRONMENTAL",
+    "HISTORICAL",
+    "DIPLOMATIC",
+    "LEGAL",
+    "MILITARY",
+    "DEMOGRAPHIC",
+    "SOCIAL",
+    "URBAN_PLANNING",
+    "CULTURAL",
+    "TECHNOLOGICAL"
+  ],
+  "agentOutputs": {},
+  "agentStatus": {
+    "HISTORICAL": "FAILED",
+    "ECONOMIC": "FAILED",
+    "POLITICAL": "FAILED",
+    "MILITARY": "FAILED",
+    "DIPLOMATIC": "FAILED",
+    "SOCIAL": "FAILED",
+    "TECHNOLOGICAL": "FAILED",
+    "ENVIRONMENTAL": "FAILED",
+    "CULTURAL": "FAILED",
+    "LEGAL": "FAILED",
+    "DEMOGRAPHIC": "FAILED",
+    "URBAN_PLANNING": "FAILED"
+  },
+  "guardResults": {},
+  "synthesis": null,
+  "safetyResult": {
+    "status": "ALLOWED",
+    "reason": "Speculative geographic/climate scenario exploring alternative planetary conditions",
+    "disclaimers": []
+  },
+  "cascades": null,
+  "stakeholderDebate": null,
+  "costTracking": {
+    "totalInputTokens": 917,
+    "totalOutputTokens": 560,
+    "inputCostUsd": 0.0028,
+    "outputCostUsd": 0.0084,
+    "searchCalls": 5,
+    "totalCostUsd": 0.0112
+  },
+  "conversation": [],
+  "version": 1,
+  "promptVersion": "v1.0",
+  "createdAt": "2026-03-22T18:05:45.815Z",
+  "updatedAt": "2026-03-22T18:05:45.815Z"
+}

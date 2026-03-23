@@ -1,0 +1,26 @@
+{
+  "id": "0f6f4535-8ab0-4b46-a0ef-9fbbb008544c",
+  "scenario": "what if nazis won the war?\n",
+  "departurePoint": "",
+  "domainWeights": {},
+  "activeAgents": [],
+  "agentOutputs": {},
+  "agentStatus": {},
+  "guardResults": {},
+  "synthesis": null,
+  "safetyResult": {
+    "status": "ALLOWED",
+    "reason": "Pending check"
+  },
+  "costTracking": {
+    "totalInputTokens": 0,
+    "totalOutputTokens": 0,
+    "inputCostUsd": 0,
+    "outputCostUsd": 0,
+    "searchCalls": 0,
+    "totalCostUsd": 0
+  },
+  "promptVersion": "1.0",
+  "createdAt": "2026-03-22T12:33:53.869Z",
+  "updatedAt": "2026-03-22T12:33:53.869Z"
+}

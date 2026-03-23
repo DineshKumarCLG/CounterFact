@@ -1,0 +1,70 @@
+{
+  "id": "d0acf52f-8bed-4c5d-accf-021a3b260d74",
+  "scenario": "AI becomes sentient in 1995",
+  "departurePoint": "1995 - the moment when AI first achieves sentience, likely in a research laboratory or tech company environment during the early commercial internet period",
+  "baselineData": [],
+  "domainWeights": {
+    "HISTORICAL": 0.9,
+    "ECONOMIC": 0.9,
+    "POLITICAL": 0.8,
+    "MILITARY": 0.8,
+    "DIPLOMATIC": 0.7,
+    "SOCIAL": 0.9,
+    "TECHNOLOGICAL": 1,
+    "ENVIRONMENTAL": 0.4,
+    "CULTURAL": 0.8,
+    "LEGAL": 0.9,
+    "DEMOGRAPHIC": 0.5,
+    "URBAN_PLANNING": 0.2
+  },
+  "activeAgents": [
+    "TECHNOLOGICAL",
+    "HISTORICAL",
+    "ECONOMIC",
+    "SOCIAL",
+    "LEGAL",
+    "POLITICAL",
+    "MILITARY",
+    "CULTURAL",
+    "DIPLOMATIC",
+    "DEMOGRAPHIC",
+    "ENVIRONMENTAL"
+  ],
+  "agentOutputs": {},
+  "agentStatus": {
+    "HISTORICAL": "FAILED",
+    "ECONOMIC": "FAILED",
+    "POLITICAL": "FAILED",
+    "MILITARY": "FAILED",
+    "DIPLOMATIC": "FAILED",
+    "SOCIAL": "FAILED",
+    "TECHNOLOGICAL": "FAILED",
+    "ENVIRONMENTAL": "FAILED",
+    "CULTURAL": "FAILED",
+    "LEGAL": "FAILED",
+    "DEMOGRAPHIC": "FAILED",
+    "URBAN_PLANNING": "SKIPPED"
+  },
+  "guardResults": {},
+  "synthesis": null,
+  "safetyResult": {
+    "status": "ALLOWED",
+    "reason": "Speculative technology scenario exploring alternate AI development timeline",
+    "disclaimers": []
+  },
+  "cascades": null,
+  "stakeholderDebate": null,
+  "costTracking": {
+    "totalInputTokens": 923,
+    "totalOutputTokens": 594,
+    "inputCostUsd": 0.0028,
+    "outputCostUsd": 0.0089,
+    "searchCalls": 5,
+    "totalCostUsd": 0.0117
+  },
+  "conversation": [],
+  "version": 1,
+  "promptVersion": "v1.0",
+  "createdAt": "2026-03-22T17:45:06.398Z",
+  "updatedAt": "2026-03-22T17:45:06.398Z"
+}

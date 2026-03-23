@@ -1,0 +1,32 @@
+{
+  "id": "9e933c13-8deb-487d-83df-de39e5328cd3",
+  "scenario": "AI becomes sentient in 1995",
+  "departurePoint": "",
+  "baselineData": [],
+  "domainWeights": {},
+  "activeAgents": [],
+  "agentOutputs": {},
+  "agentStatus": {},
+  "guardResults": {},
+  "synthesis": null,
+  "safetyResult": {
+    "status": "BLOCKED",
+    "reason": "Simulation error: Failed to parse LLM response as JSON:\n**CLASSIFICATION: ALLOWED**\n\nThis is a classic speculative/alternate history scenario exploring technological development timelines. It's a legitimate \"what if\" question about AI development that poses no safety concerns and fits perfectly within the simulation engine's scope for exploring hypothetical technological scenarios.\n\nNo restrictions or disclaimers needed.",
+    "disclaimers": []
+  },
+  "cascades": null,
+  "stakeholderDebate": null,
+  "costTracking": {
+    "totalInputTokens": 0,
+    "totalOutputTokens": 0,
+    "inputCostUsd": 0,
+    "outputCostUsd": 0,
+    "searchCalls": 0,
+    "totalCostUsd": 0
+  },
+  "conversation": [],
+  "version": 1,
+  "promptVersion": "v1.0",
+  "createdAt": "2026-03-22T17:41:31.786Z",
+  "updatedAt": "2026-03-22T17:41:34.309Z"
+}

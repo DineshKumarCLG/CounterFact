@@ -1,0 +1,71 @@
+{
+  "id": "854215bc-6324-4099-8951-d9a00e44a4f5",
+  "scenario": "AI becomes sentient in 1995",
+  "departurePoint": "1995 - The moment when an AI system first demonstrates genuine sentience, self-awareness, and autonomous decision-making capabilities",
+  "baselineData": [],
+  "domainWeights": {
+    "HISTORICAL": 0.9,
+    "ECONOMIC": 0.9,
+    "POLITICAL": 0.9,
+    "MILITARY": 0.8,
+    "DIPLOMATIC": 0.8,
+    "SOCIAL": 0.9,
+    "TECHNOLOGICAL": 1,
+    "ENVIRONMENTAL": 0.6,
+    "CULTURAL": 0.8,
+    "LEGAL": 0.9,
+    "DEMOGRAPHIC": 0.5,
+    "URBAN_PLANNING": 0.4
+  },
+  "activeAgents": [
+    "TECHNOLOGICAL",
+    "HISTORICAL",
+    "ECONOMIC",
+    "POLITICAL",
+    "SOCIAL",
+    "LEGAL",
+    "MILITARY",
+    "DIPLOMATIC",
+    "CULTURAL",
+    "ENVIRONMENTAL",
+    "DEMOGRAPHIC",
+    "URBAN_PLANNING"
+  ],
+  "agentOutputs": {},
+  "agentStatus": {
+    "HISTORICAL": "FAILED",
+    "ECONOMIC": "FAILED",
+    "POLITICAL": "FAILED",
+    "MILITARY": "FAILED",
+    "DIPLOMATIC": "FAILED",
+    "SOCIAL": "FAILED",
+    "TECHNOLOGICAL": "FAILED",
+    "ENVIRONMENTAL": "FAILED",
+    "CULTURAL": "FAILED",
+    "LEGAL": "FAILED",
+    "DEMOGRAPHIC": "FAILED",
+    "URBAN_PLANNING": "FAILED"
+  },
+  "guardResults": {},
+  "synthesis": null,
+  "safetyResult": {
+    "status": "ALLOWED",
+    "reason": "Speculative technology scenario exploring alternate AI development timeline",
+    "disclaimers": []
+  },
+  "cascades": null,
+  "stakeholderDebate": null,
+  "costTracking": {
+    "totalInputTokens": 923,
+    "totalOutputTokens": 632,
+    "inputCostUsd": 0.0028,
+    "outputCostUsd": 0.0095,
+    "searchCalls": 5,
+    "totalCostUsd": 0.0122
+  },
+  "conversation": [],
+  "version": 1,
+  "promptVersion": "v1.0",
+  "createdAt": "2026-03-22T17:59:06.285Z",
+  "updatedAt": "2026-03-22T17:59:06.285Z"
+}

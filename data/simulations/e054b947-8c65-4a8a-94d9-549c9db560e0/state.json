@@ -1,0 +1,26 @@
+{
+  "id": "e054b947-8c65-4a8a-94d9-549c9db560e0",
+  "scenario": "AI becomes sentient in 1995",
+  "departurePoint": "",
+  "domainWeights": {},
+  "activeAgents": [],
+  "agentOutputs": {},
+  "agentStatus": {},
+  "guardResults": {},
+  "synthesis": null,
+  "safetyResult": {
+    "status": "ALLOWED",
+    "reason": "Pending check"
+  },
+  "costTracking": {
+    "totalInputTokens": 0,
+    "totalOutputTokens": 0,
+    "inputCostUsd": 0,
+    "outputCostUsd": 0,
+    "searchCalls": 0,
+    "totalCostUsd": 0
+  },
+  "promptVersion": "1.0",
+  "createdAt": "2026-03-22T13:04:58.521Z",
+  "updatedAt": "2026-03-22T13:04:58.521Z"
+}

@@ -1,0 +1,26 @@
+{
+  "id": "2c1c28fd-b549-47f0-a3ab-3c156a5a77ee",
+  "scenario": "Antarctica is perfectly habitable",
+  "departurePoint": "",
+  "domainWeights": {},
+  "activeAgents": [],
+  "agentOutputs": {},
+  "agentStatus": {},
+  "guardResults": {},
+  "synthesis": null,
+  "safetyResult": {
+    "status": "ALLOWED",
+    "reason": "Pending check"
+  },
+  "costTracking": {
+    "totalInputTokens": 0,
+    "totalOutputTokens": 0,
+    "inputCostUsd": 0,
+    "outputCostUsd": 0,
+    "searchCalls": 0,
+    "totalCostUsd": 0
+  },
+  "promptVersion": "1.0",
+  "createdAt": "2026-03-22T13:33:24.959Z",
+  "updatedAt": "2026-03-22T13:33:24.959Z"
+}
