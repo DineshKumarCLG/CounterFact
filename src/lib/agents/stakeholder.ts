@@ -1,4 +1,4 @@
-import { invokeLLMJson } from "../llm/bedrock-client";
+import { invokeLLMJson } from "../llm/llm-client";
 import { loadPrompt } from "./prompt-loader";
 import type { SynthesisOutput, StakeholderDebate } from "../engine/types";
 import { StakeholderDebateSchema } from "../engine/types";

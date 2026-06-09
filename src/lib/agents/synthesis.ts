@@ -1,4 +1,4 @@
-import { invokeLLMJson } from "../llm/bedrock-client";
+import { invokeLLMJson } from "../llm/llm-client";
 import { SynthesisOutputSchema } from "../engine/types";
 import type { AgentOutput, SynthesisOutput } from "../engine/types";
 import { loadPrompt } from "./prompt-loader";

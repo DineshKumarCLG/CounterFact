@@ -1,4 +1,4 @@
-import { invokeLLMJson } from "../llm/bedrock-client";
+import { invokeLLMJson } from "../llm/llm-client";
 import { PlannerOutputSchema } from "../engine/types";
 import type { PlannerOutput } from "../engine/types";
 import { loadPrompt } from "./prompt-loader";

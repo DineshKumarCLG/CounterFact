@@ -1,4 +1,4 @@
-import { invokeLLMJson } from "../../llm/bedrock-client";
+import { invokeLLMJson } from "../../llm/llm-client";
 import { searchMultiple } from "../../llm/search";
 import { AgentOutputSchema } from "../../engine/types";
 import type { AgentOutput, Domain, SearchResult } from "../../engine/types";
