@@ -8,11 +8,11 @@ Think of it as a panel of 12 expert analysts — historian, economist, military 
 
 ---
 
-## Demo
+## Screenshots
 
-![Simulation Dashboard](https://via.placeholder.com/1200x600/030306/7c5cfc?text=Counterfact+Dashboard)
+![Home — Scenario Input](public/Dashboard%201.png)
 
-> *"What if the Berlin Wall never fell?" — Counterfact dispatches 8 specialist agents, synthesises contradictions, models a 5-level cascade DAG, and streams the complete intelligence report to your browser in real time.*
+![Simulation Dashboard — Globe Map + Intel Panel](public/Dashboard%202.png)
 
 ---
 
