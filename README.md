@@ -12,7 +12,7 @@ Think of it as a panel of 12 expert analysts — historian, economist, military 
 
 ![Simulation Dashboard](https://via.placeholder.com/1200x600/030306/7c5cfc?text=Counterfact+Dashboard)
 
-> *"What if Tamil Nadu became an independent country?" — Counterfact dispatches 8 specialist agents, synthesises contradictions, models a 5-level cascade DAG, and streams the complete intelligence report to your browser in real time.*
+> *"What if the Berlin Wall never fell?" — Counterfact dispatches 8 specialist agents, synthesises contradictions, models a 5-level cascade DAG, and streams the complete intelligence report to your browser in real time.*
 
 ---
 
@@ -32,58 +32,66 @@ Think of it as a panel of 12 expert analysts — historian, economist, military 
 
 ## Architecture
 
-```
-User Input
-    │
-    ▼
-┌───────────────┐
-│  Safety Gate  │  Block / restrict / allow + content policy classification
-└───────┬───────┘
-        │
-        ▼
-┌───────────────┐
-│    Planner    │  Decomposes scenario → domain weights → agent selection
-└───────┬───────┘
-        │
-        ▼
-┌───────────────────────────────────────────────────────────┐
-│                    Baseline Fetch                         │
-│  DuckDuckGo web search → real-world grounding data        │
-└───────────────────────────────┬───────────────────────────┘
-                                │
-        ┌───────────────────────▼───────────────────────┐
-        │              Specialist Agents (parallel)     │
-        │  HISTORICAL · ECONOMIC · POLITICAL · MILITARY │
-        │  DIPLOMATIC · SOCIAL · TECHNOLOGICAL          │
-        │  ENVIRONMENTAL · CULTURAL · LEGAL             │
-        │  DEMOGRAPHIC · URBAN_PLANNING                 │
-        │  (only domains with weight ≥ 0.3 dispatched)  │
-        └───────────────────────┬───────────────────────┘
-                                │
-                    ┌───────────▼───────────┐
-                    │     Guard Review      │
-                    │  Policy + format QA   │
-                    └───────────┬───────────┘
-                                │
-              ┌─────────────────▼─────────────────┐
-              │            Synthesis              │
-              │  Coherence · Contradiction detect  │
-              │  Confidence labelling              │
-              └─────────────┬─────────────────────┘
-                            │
-          ┌─────────────────┼──────────────────┐
-          │                 │                  │
-          ▼                 ▼                  ▼
-    ┌──────────┐    ┌──────────────┐   ┌──────────────┐
-    │  Cascade │    │ Stakeholder  │   │    Images    │
-    │  DAG +   │    │   Debate     │   │  (Runware)   │
-    │  3 Paths │    │  Simulation  │   │              │
-    └──────────┘    └──────────────┘   └──────────────┘
-          │
-          ▼
-   Streamed to browser via SSE
-   Full-viewport 2-panel dashboard
-   Map (globe) | Intel (tabs)
+```mermaid
+flowchart TD
+    A([User Input]) --> B
+
+    B["🛡️ Safety Gate\nBlock · Restrict · Allow\nContent policy classification"]
+    B --> C
+
+    C["🧠 Planner LLM\nDecomposes scenario\nAssigns domain weights 0–1\nSelects active agents"]
+    C --> D
+
+    D["🌐 Baseline Fetch\nDuckDuckGo web search\nReal-world grounding data"]
+    D --> E
+
+    subgraph E["⚡ Specialist Agents — parallel batches of 3–4"]
+        direction LR
+        E1[HISTORICAL]
+        E2[ECONOMIC]
+        E3[POLITICAL]
+        E4[MILITARY]
+        E5[DIPLOMATIC]
+        E6[SOCIAL]
+        E7[TECHNOLOGICAL]
+        E8[ENVIRONMENTAL]
+        E9[CULTURAL]
+        E10[LEGAL]
+        E11[DEMOGRAPHIC]
+        E12[URBAN_PLANNING]
+    end
+
+    E --> F
+
+    F["🔒 Guard Review\nPrompt injection check\nPolicy & format QA\nNon-blocking"]
+    F --> G
+
+    G["🔬 Synthesis LLM\nCoherence pass\nContradiction detection\nConfidence labelling"]
+
+    G --> H
+    G --> I
+    G --> J
+
+    H["🌊 Cascade Engine\nProbabilistic DAG\n2nd & 3rd order effects\n3 scenario paths"]
+    I["🗣️ Stakeholder Debate\nMulti-perspective simulation\nAuthentic voice differentiation"]
+    J["🖼️ Image Generation\nRunware AI\nVisual prompt pipeline"]
+
+    H --> K
+    I --> K
+    J --> K
+
+    K(["📡 SSE Stream → Browser\nFull-viewport dashboard\nGlobe map · Intel tabs · Ask"])
+
+    style B fill:#1a0a2e,stroke:#7c5cfc,color:#c4b5fd
+    style C fill:#0a1a2e,stroke:#60a5fa,color:#bfdbfe
+    style D fill:#0a1a2e,stroke:#60a5fa,color:#bfdbfe
+    style E fill:#0d0d16,stroke:#334155,color:#94a3b8
+    style F fill:#1a1a0a,stroke:#fbbf24,color:#fde68a
+    style G fill:#0a1a2e,stroke:#60a5fa,color:#bfdbfe
+    style H fill:#0a2e1a,stroke:#34d399,color:#a7f3d0
+    style I fill:#0a2e1a,stroke:#34d399,color:#a7f3d0
+    style J fill:#0a2e1a,stroke:#34d399,color:#a7f3d0
+    style K fill:#1a0a2e,stroke:#7c5cfc,color:#c4b5fd
 ```
 
 ---
@@ -127,13 +135,13 @@ The Planner LLM reads the scenario and returns:
 ```typescript
 {
   scenarioSummary: string,
-  departurePoint: string,        // "The Tamil Nadu independence referendum passes — June 1967"
+  departurePoint: string,        // "The Berlin Wall never falls — November 1989"
   domainWeights: Record<Domain, number>,  // { ECONOMIC: 0.9, MILITARY: 0.7, ... }
   activeAgents: Domain[],        // only domains with weight >= 0.3
   baselineDataRequired: string[] // web search queries
 }
 ```
-This means a scenario about currency reform only dispatches 4–5 agents. A full independence scenario dispatches 8–10.
+This means a scenario about currency reform only dispatches 4–5 agents. A full geopolitical shift dispatches 8–10.
 
 ### Stage 2 — Parallel Specialist Agents
 Each active agent runs independently:
@@ -161,12 +169,12 @@ The Synthesis agent receives all approved outputs and:
 ### Stage 5 — Cascade Engine
 Generates a probabilistic DAG of ripple effects:
 ```
-Tamil Nadu independence
-  → India loses ₹2.3T IT tax revenue [HIGH, 0.9]
-    → Union budget deficit widens [HIGH, 0.85]
-      → Rupee depreciates [MODERATE, 0.6]
-        → New Tamil currency faces import inflation [MODERATE, 0.55]
-          → Fiscal austerity in Year 2 [SPECULATIVE, 0.4]
+A major power exits a regional alliance
+  → Regional security vacuum widens [HIGH, 0.9]
+    → Neighbouring states accelerate rearmament [HIGH, 0.85]
+      → Regional arms race drives inflation [MODERATE, 0.6]
+        → Domestic fiscal pressure mounts [MODERATE, 0.55]
+          → Political instability in Year 2 [SPECULATIVE, 0.4]
 ```
 Also produces three scenario paths: `OPTIMISTIC`, `BASE_CASE`, `PESSIMISTIC` — each with year-tagged milestones.
 
@@ -186,7 +194,7 @@ The left panel of the dashboard is a full-height MapLibre GL map:
 - **Hover tooltips** — hover any country to see its regional impact summary, active domains, and intensity bar
 - **Region jump pills** — click any affected region to fly the globe there
 
-This approach is **border-agnostic** by design — the heatmap and arcs represent impact flows, not political boundaries. Alternate-history scenarios (Nazi victory, Tamil Nadu independence) don't rely on which country lines exist on the map.
+This approach is **border-agnostic** by design — the heatmap and arcs represent impact flows, not political boundaries. Alternate-history scenarios with redrawn borders don't rely on which country lines exist on the map.
 
 ---
 
@@ -287,7 +295,7 @@ Open [http://localhost:3000](http://localhost:3000).
 2. Enter a counterfactual scenario:
    - *"What if India never gained independence from Britain?"*
    - *"What if the Soviet Union won the Space Race?"*
-   - *"What if Tamil Nadu became an independent country in 1967?"*
+   - *"What if the Berlin Wall never fell?"*
 3. Watch the agents dispatch and complete in real time
 4. Explore the intelligence report across 7 tabs: Synthesis · Domains · Contradictions · Cascades · Paths · Stakeholders · Ask
 5. Use the **Ask** tab to drill down with follow-up questions
