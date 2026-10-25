@@ -392,13 +392,7 @@ Uses Vitest. Current coverage targets the type schemas and validation layer.
 
 ## Built by
 
-**Dinesh Kumar** — CPO / Founding Engineer, Kenesis Labs Pvt Ltd  
-Chennai, India · [kenesis.ai](https://kenesis.ai)
+**Dinesh Kumar**
+Chennai, India · 
 
 > *Counterfact is a product design and engineering project demonstrating agentic AI orchestration, streaming LLM pipelines, and real-time geospatial visualisation at production quality.*
-
----
-
-## License
-
-Private — All rights reserved. Kenesis Labs Pvt Ltd.
