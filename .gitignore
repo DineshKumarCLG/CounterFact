@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+.pytest_cache/
 
 # next.js
 /.next/
@@ -29,6 +30,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -47,6 +49,7 @@ data/counterfact.db*
 
 # AI and agent trace files
 .agent/
+.agents/
 .claude*
 .aider*
 COUNTERFACT_PDR_*.md

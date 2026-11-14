@@ -9,7 +9,7 @@ import type {
 } from "@/lib/engine/types";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { getBYOKConfig, getBYOKHeaders } from "@/components/ui/BYOKModal";
+import { BYOKModal, getBYOKConfig, getBYOKHeaders } from "@/components/ui/BYOKModal";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -1287,20 +1287,77 @@ export function SimulationDashboard({ simulationId }: { simulationId: string }) 
   const [error, setError] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"map" | "intel">("intel");
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isByokOpen, setIsByokOpen] = useState(false);
   const esRef = useRef<EventSource | null>(null);
 
   /* Poll / stream state */
   useEffect(() => {
     let cancelled = false;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let retryCount = 0;
+
+    // Immediately initialize state from localStorage if available
+    try {
+      if (typeof window !== "undefined") {
+        const cached = localStorage.getItem(`counterfact_sim_${simulationId}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed?.id === simulationId) {
+            setState(parsed);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to read local simulation state:", e);
+    }
 
     async function load() {
       try {
         const res = await fetch(`/api/simulations/${simulationId}`);
-        if (!res.ok) throw new Error(`${res.status}`);
+        if (!res.ok) {
+          if (res.status === 404) {
+            // Check if we have local state to sync with server container
+            const localRaw = typeof window !== "undefined" ? localStorage.getItem(`counterfact_sim_${simulationId}`) : null;
+            if (localRaw) {
+              try {
+                const localState = JSON.parse(localRaw);
+                if (localState?.id === simulationId) {
+                  if (!cancelled) setState(localState);
+                  // Attempt server sync in background to warm container
+                  fetch(`/api/simulations/${simulationId}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ state: localState }),
+                  }).catch(() => {});
+                  return; // Don't throw or set error!
+                }
+              } catch {}
+            }
+            // If no local state and retries remain, wait and retry
+            if (retryCount < 8) {
+              retryCount++;
+              setTimeout(() => {
+                if (!cancelled) load();
+              }, 2000);
+              return;
+            }
+          }
+          throw new Error(`${res.status}`);
+        }
         const data: SimulationState = await res.json();
-        if (!cancelled) setState(data);
+        if (!cancelled && data?.id) {
+          setState(data);
+          try {
+            localStorage.setItem(`counterfact_sim_${simulationId}`, JSON.stringify(data));
+          } catch {}
+        }
       } catch (e) {
-        if (!cancelled) setError(String(e));
+        if (!cancelled) {
+          setState((curr) => {
+            if (!curr) setError(String(e));
+            return curr;
+          });
+        }
       }
     }
 
@@ -1312,15 +1369,50 @@ export function SimulationDashboard({ simulationId }: { simulationId: string }) 
     es.onmessage = (e) => {
       try {
         const data: SimulationState = JSON.parse(e.data);
-        // stream sends raw state object
-        if (data?.id && !cancelled) setState(data);
+        if (data?.id && !cancelled) {
+          setState(data);
+          try {
+            localStorage.setItem(`counterfact_sim_${simulationId}`, JSON.stringify(data));
+          } catch {}
+        }
       } catch { /* skip */ }
     };
     es.addEventListener("close", () => es.close());
-    es.onerror = () => { es.close(); };
+    es.onerror = () => {
+      // Don't crash on SSE close, polling fallback takes over
+      es.close();
+    };
+
+    // Resilient polling fallback every 3s
+    pollInterval = setInterval(async () => {
+      if (cancelled) return;
+      try {
+        const res = await fetch(`/api/simulations/${simulationId}`);
+        if (res.ok) {
+          const data: SimulationState = await res.json();
+          if (data?.id && !cancelled) {
+            setState(data);
+            try {
+              localStorage.setItem(`counterfact_sim_${simulationId}`, JSON.stringify(data));
+            } catch {}
+            if (
+              data.status === "COMPLETE" ||
+              data.status === "PARTIAL" ||
+              data.status === "FAILED" ||
+              data.safetyResult?.status === "BLOCKED"
+            ) {
+              if (pollInterval) clearInterval(pollInterval);
+            }
+          }
+        }
+      } catch {
+        // Skip polling errors
+      }
+    }, 3000);
 
     return () => {
       cancelled = true;
+      if (pollInterval) clearInterval(pollInterval);
       es.close();
       esRef.current = null;
     };
@@ -1368,9 +1460,13 @@ export function SimulationDashboard({ simulationId }: { simulationId: string }) 
     ? Object.values(state.agentStatus).some(s => s === "ACTIVE" || s === "DISPATCHED" || s === "PENDING")
     : false;
 
+  const isFailedOrBlocked =
+    state.status === "FAILED" ||
+    state.safetyResult?.status === "BLOCKED";
+
   // Show progress if actively running OR if agents exist but synthesis not yet done
   const hasAgents = (state.activeAgents?.length ?? 0) > 0;
-  const showProgress = isRunning || (hasAgents && !state.synthesis);
+  const showProgress = !isFailedOrBlocked && (isRunning || (hasAgents && !state.synthesis));
 
   const completedDomains = state.agentStatus
     ? Object.values(state.agentStatus).filter(s => s === "COMPLETE").length
@@ -1538,7 +1634,48 @@ export function SimulationDashboard({ simulationId }: { simulationId: string }) 
 
           {/* Content */}
           <div className="flex-1 min-h-0 overflow-hidden">
-            {showProgress ? (
+            {isFailedOrBlocked ? (
+              <div className="p-6 sm:p-8 flex flex-col items-center justify-center min-h-[400px] text-center space-y-4 max-w-lg mx-auto">
+                <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 text-xl">
+                  {state.safetyResult?.status === "BLOCKED" ? "🛡️" : "⚠️"}
+                </div>
+                <div className="space-y-1.5 w-full">
+                  <h3 className="text-sm font-semibold text-white">
+                    {state.safetyResult?.status === "BLOCKED"
+                      ? "Simulation Blocked by Safety Guardrails"
+                      : "Simulation Execution Failed"}
+                  </h3>
+                  <p className="text-xs text-zinc-300 font-mono break-words leading-relaxed bg-black/40 border border-white/5 rounded-xl p-3.5 text-left">
+                    {state.safetyResult?.reason || "An error occurred during multi-agent simulation execution."}
+                  </p>
+                </div>
+
+                {state.safetyResult?.disclaimers && state.safetyResult.disclaimers.length > 0 && (
+                  <div className="text-[11px] text-zinc-500 text-left w-full space-y-1">
+                    {state.safetyResult.disclaimers.map((d, i) => (
+                      <p key={i}>• {d}</p>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsByokOpen(true)}
+                    className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium transition-colors flex items-center gap-1.5 shadow-sm"
+                  >
+                    <span>⚙️</span>
+                    <span>Configure Provider (BYOK)</span>
+                  </button>
+                  <Link
+                    href="/"
+                    className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-medium border border-white/10 transition-colors"
+                  >
+                    ← Return to Simulations
+                  </Link>
+                </div>
+              </div>
+            ) : showProgress ? (
               <ProgressView state={state} />
             ) : (
               <ReportView state={state} simId={simulationId} />
@@ -1546,6 +1683,7 @@ export function SimulationDashboard({ simulationId }: { simulationId: string }) 
           </div>
         </div>
       </div>
+      <BYOKModal isOpen={isByokOpen} onClose={() => setIsByokOpen(false)} />
     </div>
   );
 }

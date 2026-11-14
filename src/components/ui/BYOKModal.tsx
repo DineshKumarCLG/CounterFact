@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RefinedButton } from "./RefinedButton";
 
+export { OPENROUTER_PRESETS, type ModelPreset } from "@/lib/byok-client";
+import { OPENROUTER_PRESETS } from "@/lib/byok-client";
+
 export type BYOKProvider =
   | "bedrock"
   | "gemini"
@@ -453,6 +456,51 @@ export function BYOKModal({ isOpen, onClose }: BYOKModalProps) {
                       </button>
                     </div>
                   </div>
+
+                  {/* OpenRouter Model Presets and Warning */}
+                  {provider === "openrouter" && (
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-medium text-zinc-300">
+                          Recommended Models
+                        </label>
+                        <span className="text-[10px] text-zinc-400">Quick select</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {OPENROUTER_PRESETS.map((preset) => {
+                          const isSelected = (modelId || activeProvider.defaultModel) === preset.id;
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => setModelId(preset.id)}
+                              className={`text-left p-2 rounded-lg border text-xs transition-all ${
+                                isSelected
+                                  ? "bg-purple-600/20 border-purple-500/50 text-white"
+                                  : "bg-white/[0.03] border-white/10 hover:border-white/20 text-zinc-300 hover:text-white"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium truncate text-[11px]">{preset.label}</span>
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-zinc-400 font-mono ml-1 shrink-0">
+                                  {preset.tag}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-zinc-500 font-mono truncate mt-0.5">
+                                {preset.id}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 flex items-start gap-2 leading-relaxed">
+                        <span className="text-amber-400 font-bold shrink-0 mt-0.5">⚠️</span>
+                        <span>
+                          <strong>Note:</strong> Some OpenRouter free models (such as <code>thinkingmachines/inkling-2-small:free</code>) return HTTP 403 Forbidden due to access gating. For reliable free usage, select <strong>Gemini 2.0 Flash (Free)</strong>.
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Optional Model ID and Base URL */}
                   <div className="grid grid-cols-2 gap-2">

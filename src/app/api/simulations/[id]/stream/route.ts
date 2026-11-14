@@ -1,5 +1,7 @@
 import { loadSimulationState } from "@/lib/storage/filesystem";
 
+export const maxDuration = 300;
+
 const SIMULATION_ID_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -19,6 +21,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const stream = new ReadableStream({
     async start(controller) {
       const encode = (data: unknown) => new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);
+      const keepAlive = new TextEncoder().encode(": keep-alive\n\n");
       
       let lastUpdatedAt: string | null = null;
       let missedCount = 0;
@@ -51,6 +54,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             if (lastUpdatedAt === null || state.updatedAt !== lastUpdatedAt) {
               controller.enqueue(encode(state));
               lastUpdatedAt = state.updatedAt;
+            } else {
+              // Heartbeat keep-alive to prevent edge/proxy drop
+              controller.enqueue(keepAlive);
             }
             
             // Close stream if simulation is fully complete or explicitly blocked
@@ -73,8 +79,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             }
           } else {
             missedCount++;
-            // Give initial state up to 20 seconds to appear before giving up
-            if (missedCount >= 20) {
+            // Keep stream open with heartbeats while container warms up or client syncs
+            controller.enqueue(keepAlive);
+            // Give state up to 180 seconds to appear before giving up
+            if (missedCount >= 180) {
               cleanup();
             }
           }

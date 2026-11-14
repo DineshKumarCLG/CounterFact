@@ -226,7 +226,7 @@ export async function POST(request: Request) {
       }
     });
 
-    return NextResponse.json({ id });
+    return NextResponse.json({ id, state: initialState });
   } catch {
     return NextResponse.json({ error: "Failed to start" }, { status: 500 });
   }

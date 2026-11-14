@@ -195,7 +195,17 @@ export default function Home() {
         throw new Error(message);
       }
 
-      const { id } = await res.json();
+      const data = await res.json();
+      const id = data?.id;
+
+      if (id && data?.state && typeof window !== "undefined") {
+        try {
+          localStorage.setItem(`counterfact_sim_${id}`, JSON.stringify(data.state));
+        } catch (storageErr) {
+          console.warn("Failed to cache simulation state in localStorage:", storageErr);
+        }
+      }
+
       router.push(`/simulations/${id}`);
     } catch (err) {
       setIsSimulating(false);
