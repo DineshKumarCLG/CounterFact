@@ -51,3 +51,4 @@ data/simulations/*
 COUNTERFACT_PDR_*.md
 CLAUDE.md
 AGENTS.md
+__pycache__/
