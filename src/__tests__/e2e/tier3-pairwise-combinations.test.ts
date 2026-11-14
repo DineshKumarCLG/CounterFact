@@ -15,7 +15,7 @@ vi.mock("next/server", async (importOriginal) => {
       const taskPromise = Promise.resolve().then(async () => {
         try {
           await cb();
-        } catch (err) {
+        } catch {
           // Swallow or log background task errors in after() mock
         }
       });
@@ -58,7 +58,7 @@ import { saveSimulationMeta, getSimulationMeta, deleteSimulation } from "@/lib/s
 import { CONFIG, calculateCost } from "@/lib/engine/config";
 import { runSimulation } from "@/lib/engine/pipeline";
 import { invokeLLM, invokeLLMJson } from "@/lib/llm/llm-client";
-import { branchExists, getBranchFileList, getBranchFile } from "./test-helpers";
+
 import type { SimulationState } from "@/lib/engine/types";
 
 import * as validator from "@/lib/safety/validator";

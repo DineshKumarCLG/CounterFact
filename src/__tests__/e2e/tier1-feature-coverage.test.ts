@@ -12,7 +12,6 @@ import { setupMockBrowserStorage, branchExists, getBranchFileList } from "./test
 import {
   SynthesisOutputSchema,
   PlannerOutputSchema,
-  AgentOutputSchema,
 } from "@/lib/engine/types";
 
 // Mock next/server's after() for unit test environment
