@@ -95,7 +95,6 @@ describe("API Endpoints", () => {
         synthesis: {
           overallConfidence: "HIGH",
           unifiedAnalysis: "Early computing networks expanded quickly.",
-          keyDisagreements: [],
           contradictions: [],
         },
         safetyResult: { status: "ALLOWED", reason: "Safe", disclaimers: [] },
