@@ -74,22 +74,26 @@ function buildRequestBody(
 /**
  * Parse the response body based on the model provider
  */
-function parseResponse(responseBody: Record<string, any>): LLMResponse {
+function parseResponse(responseBody: Record<string, unknown>): LLMResponse {
   if (isAnthropicModel()) {
+    const content = responseBody.content as Array<{ text: string }> | undefined;
+    const usage = responseBody.usage as { input_tokens?: number; output_tokens?: number } | undefined;
     return {
-      content: responseBody.content[0].text,
-      inputTokens: responseBody.usage?.input_tokens ?? 0,
-      outputTokens: responseBody.usage?.output_tokens ?? 0,
+      content: content?.[0]?.text ?? "",
+      inputTokens: usage?.input_tokens ?? 0,
+      outputTokens: usage?.output_tokens ?? 0,
     };
   }
 
   // OpenAI-compatible format (GLM, Mistral, Meta, etc.)
-  const choice = responseBody.choices?.[0];
+  const choices = responseBody.choices as Array<{ message?: { content?: string }; text?: string }> | undefined;
+  const choice = choices?.[0];
   const text = choice?.message?.content ?? choice?.text ?? "";
+  const usage = responseBody.usage as { prompt_tokens?: number; completion_tokens?: number } | undefined;
   return {
     content: text,
-    inputTokens: responseBody.usage?.prompt_tokens ?? 0,
-    outputTokens: responseBody.usage?.completion_tokens ?? 0,
+    inputTokens: usage?.prompt_tokens ?? 0,
+    outputTokens: usage?.completion_tokens ?? 0,
   };
 }
 

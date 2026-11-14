@@ -12,13 +12,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const stream = new ReadableStream({
     async start(controller) {
-      const encode = (data: any) => new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);
+      const encode = (data: unknown) => new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);
       
       let lastUpdatedAt = "";
+      let missedCount = 0;
       
       const interval = setInterval(() => {
         const state = loadSimulationState(id);
         if (state) {
+          missedCount = 0;
           // Send update if state changed
           if (state.updatedAt !== lastUpdatedAt) {
             controller.enqueue(encode(state));
@@ -37,9 +39,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             controller.close();
           }
         } else {
-          // Ensure we don't leak memory if state is never found
-          clearInterval(interval);
-          controller.close();
+          missedCount++;
+          // Give initial state up to 20 seconds to appear before giving up
+          if (missedCount >= 20) {
+            clearInterval(interval);
+            controller.close();
+          }
         }
       }, 1000); // poll every 1s
 

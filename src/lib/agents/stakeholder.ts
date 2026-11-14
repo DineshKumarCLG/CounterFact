@@ -12,7 +12,7 @@ export async function runStakeholderDebate(
   inputTokens: number;
   outputTokens: number;
 }> {
-  const systemPrompt = await loadPrompt("stakeholder");
+  const systemPrompt = loadPrompt("stakeholder");
 
   const userMessage = [
     `SCENARIO: ${scenario}`,

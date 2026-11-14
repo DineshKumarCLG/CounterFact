@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { RefinedButton } from "@/components/ui/RefinedButton";
 import { RefinedCard } from "@/components/ui/RefinedCard";
-import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
 interface SimRecord {
@@ -88,11 +88,6 @@ export default function Home() {
   const [isFocused, setIsFocused] = useState(false);
   const router = useRouter();
 
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  const spotlightX = useTransform(mouseX, (v) => `${v}px`);
-  const spotlightY = useTransform(mouseY, (v) => `${v}px`);
-
   useEffect(() => {
     fetch("/api/simulations?limit=12")
       .then((r) => r.json())
@@ -126,10 +121,7 @@ export default function Home() {
   };
 
   return (
-    <div
-      className="flex flex-col items-center p-4 space-y-20"
-      onMouseMove={(e) => { mouseX.set(e.clientX); mouseY.set(e.clientY); }}
-    >
+    <div className="flex flex-col items-center p-4 space-y-20">
 
       {/* ── Hero ──────────────────────────────────────────── */}
       <div className="relative min-h-[60vh] flex flex-col items-center justify-center w-full">

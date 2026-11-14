@@ -1,4 +1,4 @@
-import { invokeLLMJson } from "../llm/bedrock-client";
+import { invokeLLMJson } from "../llm/llm-client";
 import type { SafetyResult } from "../engine/types";
 import { SafetyResultSchema } from "../engine/types";
 

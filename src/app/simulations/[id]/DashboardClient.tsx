@@ -714,7 +714,7 @@ function ProgressView({ state }: { state: SimulationState }) {
    ================================================================ */
 interface TreeLayout { positions: Map<string, { x: number; y: number; node: CascadeNode }>; w: number; h: number; }
 
-function layoutTree(nodes: CascadeNode[], edges: CascadeEdge[]): TreeLayout {
+function layoutTree(nodes: CascadeNode[]): TreeLayout {
   const levels = new Map<number, CascadeNode[]>();
   for (const n of nodes) { const a = levels.get(n.level) ?? []; a.push(n); levels.set(n.level, a); }
   const NW = 200, NH = 72, GY = 100, GX = 32, P = 48;
@@ -739,7 +739,7 @@ function CascadeTree({ nodes, edges, loops }: {
   loops: { nodes: string[]; description: string; breakpoint: string }[];
 }) {
   const [hov, setHov] = useState<string | null>(null);
-  const layout = useMemo(() => layoutTree(nodes, edges), [nodes, edges]);
+  const layout = useMemo(() => layoutTree(nodes), [nodes]);
   const { positions: pos, w, h } = layout;
   const NW = 200, NH = 72, NR = 10;
   const loopIds = useMemo(() => { const s = new Set<string>(); loops.forEach(l => l.nodes.forEach(id => s.add(id))); return s; }, [loops]);
@@ -1084,25 +1084,34 @@ function DrillDown({ simId, state }: { simId: string; state: SimulationState }) 
       const res = await fetch(`/api/simulations/${simId}/refine`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: q }),
+        body: JSON.stringify({ question: q, message: q }),
       });
-      if (!res.body) throw new Error("No stream");
-      const reader = res.body.getReader();
-      const dec = new TextDecoder();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = dec.decode(value, { stream: true });
-        for (const line of chunk.split("\n")) {
-          if (line.startsWith("data: ")) {
-            try {
-              const d = JSON.parse(line.slice(6));
-              if (d.delta) { buf += d.delta; setMsgs(prev => { const n = [...prev]; n[n.length-1] = { role: "assistant", content: buf }; return n; }); }
-            } catch { /* skip */ }
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        const reply = data.answer ?? data.content ?? "";
+        setMsgs(prev => { const n = [...prev]; n[n.length-1] = { role: "assistant", content: reply }; return n; });
+      } else if (res.body) {
+        const reader = res.body.getReader();
+        const dec = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = dec.decode(value, { stream: true });
+          for (const line of chunk.split("\n")) {
+            if (line.startsWith("data: ")) {
+              try {
+                const payload = line.slice(6).trim();
+                if (payload === "[DONE]") break;
+                const d = JSON.parse(payload);
+                if (d.delta) { buf += d.delta; setMsgs(prev => { const n = [...prev]; n[n.length-1] = { role: "assistant", content: buf }; return n; }); }
+              } catch { /* skip */ }
+            }
           }
         }
       }
-    } catch (e) {
+    } catch {
       setMsgs(prev => { const n = [...prev]; n[n.length-1] = { role: "assistant", content: "Error reaching the engine." }; return n; });
     } finally { setLoading(false); }
   }, [input, loading, simId]);
@@ -1113,7 +1122,7 @@ function DrillDown({ simId, state }: { simId: string; state: SimulationState }) 
         {msgs.length === 0 && (
           <div className="text-center py-12">
             <div className="text-zinc-700 text-sm">Ask anything about this simulation</div>
-            <div className="text-zinc-800 text-[11px] mt-1">e.g. "What's the most likely 5-year outcome?"</div>
+            <div className="text-zinc-800 text-[11px] mt-1">e.g. &quot;What&apos;s the most likely 5-year outcome?&quot;</div>
           </div>
         )}
         {msgs.map((m, i) => (

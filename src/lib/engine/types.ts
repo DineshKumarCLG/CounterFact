@@ -142,6 +142,7 @@ export type SynthesisOutput = z.infer<typeof SynthesisOutputSchema>;
 
 // ─── Safety Validation ──────────────────────────────────────────
 export const SafetyStatus = z.enum(["ALLOWED", "RESTRICTED", "BLOCKED"]);
+export type SafetyStatus = z.infer<typeof SafetyStatus>;
 
 export const SafetyResultSchema = z.object({
   status: SafetyStatus,

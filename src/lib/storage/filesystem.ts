@@ -33,6 +33,11 @@ export function loadSimulationState(
     return null;
   }
 
-  const raw = readFileSync(filePath, "utf-8");
-  return JSON.parse(raw) as SimulationState;
+  try {
+    const raw = readFileSync(filePath, "utf-8");
+    return JSON.parse(raw) as SimulationState;
+  } catch (err) {
+    console.error(`Failed to parse state for ${simId}:`, err);
+    return null;
+  }
 }

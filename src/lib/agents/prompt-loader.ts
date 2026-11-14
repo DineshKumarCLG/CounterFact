@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import { CONFIG } from "../engine/config";
 
@@ -15,18 +15,24 @@ export function loadPrompt(name: string, version?: string): string {
     return promptCache.get(cacheKey)!;
   }
 
-  const filePath = join(
-    process.cwd(),
-    CONFIG.prompts.basePath,
-    ver,
-    `${name}.md`
-  );
+  const candidatePaths = [
+    join(process.cwd(), CONFIG.prompts.basePath, ver, `${name}.md`),
+    join(process.cwd(), "src/lib/prompts", ver, `${name}.md`),
+    join(__dirname, "../prompts", ver, `${name}.md`),
+    join(__dirname, "../../prompts", ver, `${name}.md`),
+  ];
 
-  try {
-    const content = readFileSync(filePath, "utf-8");
-    promptCache.set(cacheKey, content);
-    return content;
-  } catch {
-    throw new Error(`Prompt file not found: ${filePath}`);
+  for (const filePath of candidatePaths) {
+    if (existsSync(filePath)) {
+      try {
+        const content = readFileSync(filePath, "utf-8");
+        promptCache.set(cacheKey, content);
+        return content;
+      } catch {
+        // Continue to next candidate
+      }
+    }
   }
+
+  throw new Error(`Prompt file not found for ${name} (${ver}). Searched paths: ${candidatePaths.join(", ")}`);
 }

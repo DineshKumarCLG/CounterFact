@@ -20,11 +20,12 @@ import type {
   GuardResult,
   CascadeOutput,
   StakeholderDebate,
+  SafetyStatus,
 } from "../engine/types";
 import { DOMAINS } from "../engine/types";
 
 export interface PipelineCallbacks {
-  onSafetyCheck?: (status: string, reason: string) => void;
+  onSafetyCheck?: (status: SafetyStatus, reason: string) => void;
   onPlannerComplete?: (domains: Domain[], weights: Record<string, number>) => void;
   onAgentStart?: (domain: Domain) => void;
   onAgentComplete?: (domain: Domain, confidence: string) => void;

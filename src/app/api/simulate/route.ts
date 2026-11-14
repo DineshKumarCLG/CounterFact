@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { after } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { runSimulation } from "@/lib/engine/pipeline";
-import { saveSimulationState } from "@/lib/storage/filesystem";
+import { saveSimulationState, loadSimulationState } from "@/lib/storage/filesystem";
 import { saveSimulationMeta } from "@/lib/storage/db";
 import { sanitizeScenarioInput } from "@/lib/safety/sanitize";
 import type { SimulationState } from "@/lib/engine/types";
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
             mutateState(id, (s) => {
               s.agentStatus[domain] = "ACTIVE";
             }),
-          onAgentComplete: (domain, confidence) =>
+          onAgentComplete: (domain) =>
             mutateState(id, (s) => {
               s.agentStatus[domain] = "COMPLETE";
             }),
@@ -90,18 +90,22 @@ export async function POST(request: Request) {
         }, id);
 
         saveSimulationState(finalState);
-        saveSimulationMeta({
-          id: finalState.id,
-          scenario: finalState.scenario,
-          departurePoint: finalState.departurePoint,
-          status: finalState.synthesis ? "COMPLETE" : "PARTIAL",
-          agentCount: finalState.activeAgents.length,
-          domains: finalState.activeAgents.join(","),
-          costCents: Math.round(finalState.costTracking.totalCostUsd * 100),
-          promptVersion: finalState.promptVersion,
-          createdAt: finalState.createdAt,
-          updatedAt: finalState.updatedAt,
-        });
+        try {
+          saveSimulationMeta({
+            id: finalState.id,
+            scenario: finalState.scenario,
+            departurePoint: finalState.departurePoint,
+            status: finalState.synthesis ? "COMPLETE" : "PARTIAL",
+            agentCount: finalState.activeAgents.length,
+            domains: finalState.activeAgents.join(","),
+            costCents: Math.round(finalState.costTracking.totalCostUsd * 100),
+            promptVersion: finalState.promptVersion,
+            createdAt: finalState.createdAt,
+            updatedAt: finalState.updatedAt,
+          });
+        } catch (metaErr) {
+          console.warn("Failed to save simulation metadata to DB:", metaErr);
+        }
       } catch (err) {
         console.error("Simulation failed:", err);
         mutateState(id, (s) => {
@@ -120,17 +124,13 @@ export async function POST(request: Request) {
   }
 }
 
-function mutateState(id: string, mutator: (state: Record<string, any>) => void) {
-  const fs = require("fs");
-  const path = require("path");
-  const statePath = path.join("./data", "simulations", id, "state.json");
-
+function mutateState(id: string, mutator: (state: SimulationState) => void) {
   try {
-    if (fs.existsSync(statePath)) {
-      const state = JSON.parse(fs.readFileSync(statePath, "utf-8"));
+    const state = loadSimulationState(id);
+    if (state) {
       mutator(state);
       state.updatedAt = new Date().toISOString();
-      fs.writeFileSync(statePath, JSON.stringify(state, null, 2));
+      saveSimulationState(state);
     }
   } catch (e) {
     console.error("Failed to mutate state:", e);

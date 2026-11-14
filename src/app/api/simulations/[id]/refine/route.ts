@@ -1,5 +1,5 @@
 import { loadSimulationState, saveSimulationState } from "@/lib/storage/filesystem";
-import { invokeLLM } from "@/lib/llm/bedrock-client";
+import { invokeLLM } from "@/lib/llm/llm-client";
 import { sanitizeScenarioInput } from "@/lib/safety/sanitize";
 import type { ConversationMessage } from "@/lib/engine/types";
 
@@ -19,7 +19,7 @@ export async function POST(
   }
 
   const body = await request.json();
-  const rawQuestion = body.question as string | undefined;
+  const rawQuestion = (body.question ?? body.message) as string | undefined;
 
   if (!rawQuestion?.trim()) {
     return Response.json({ error: "No question provided" }, { status: 400 });
@@ -71,6 +71,23 @@ export async function POST(
     state.updatedAt = new Date().toISOString();
 
     saveSimulationState(state);
+
+    if (request.headers.get("accept")?.includes("text/event-stream")) {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ delta: content })}\n\n`));
+          controller.enqueue(new TextEncoder().encode(`data: [DONE]\n\n`));
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+      });
+    }
 
     return Response.json({ answer: content, inputTokens, outputTokens });
   } catch (err) {
