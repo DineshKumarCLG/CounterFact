@@ -50,8 +50,5 @@
   },
   "optionalDependencies": {
     "@rolldown/binding-darwin-arm64": "^1.0.0-rc.10"
-  },
-  "optionalDependencies": {
-    "@rolldown/binding-darwin-arm64": "^1.0.0-rc.10"
   }
 }

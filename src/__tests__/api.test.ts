@@ -24,6 +24,14 @@ describe("API Endpoints", () => {
       expect(json.version).toBeDefined();
       expect(json.provider).toBeDefined();
       expect(json.model).toBeDefined();
+      expect(json.supportedProviders).toEqual([
+        "gemini",
+        "openai",
+        "anthropic",
+        "nvidia",
+        "bedrock",
+        "openrouter",
+      ]);
     });
   });
 

@@ -43,3 +43,11 @@ next-env.d.ts
 # simulation data
 data/simulations/*
 !data/simulations/.gitkeep
+
+# AI and agent trace files
+.agent/
+.claude*
+.aider*
+COUNTERFACT_PDR_*.md
+CLAUDE.md
+AGENTS.md

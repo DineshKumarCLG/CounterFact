@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { saveSimulationState, loadSimulationState } from "@/lib/storage/filesystem";
-import { saveSimulationMeta, getSimulationMeta, listSimulations } from "@/lib/storage/db";
+import { saveSimulationMeta, getSimulationMeta, listSimulations, deleteSimulation } from "@/lib/storage/db";
 import type { SimulationState } from "@/lib/engine/types";
 import { rmSync, existsSync } from "fs";
 import { join } from "path";
@@ -103,6 +103,29 @@ describe("Storage Engine", () => {
       expect(Array.isArray(list)).toBe(true);
       const found = list.find((s) => s.id === testId);
       expect(found).toBeDefined();
+    });
+
+    it("deletes simulation record from SQLite", () => {
+      saveSimulationMeta({
+        id: testId,
+        scenario: mockState.scenario,
+        departurePoint: mockState.departurePoint,
+        status: "COMPLETE",
+        agentCount: 2,
+        domains: "HISTORICAL,MILITARY",
+        costCents: 1,
+        promptVersion: "v1.0",
+        createdAt: mockState.createdAt,
+        updatedAt: mockState.updatedAt,
+      });
+
+      expect(getSimulationMeta(testId)).toBeDefined();
+      deleteSimulation(testId);
+      expect(getSimulationMeta(testId)).toBeUndefined();
+    });
+
+    it("handles deleteSimulation for non-existent id gracefully", () => {
+      expect(() => deleteSimulation("non-existent-" + Date.now())).not.toThrow();
     });
   });
 });

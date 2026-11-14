@@ -9,6 +9,7 @@ import type {
 } from "@/lib/engine/types";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { getBYOKHeaders } from "@/lib/byok-client";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -1083,7 +1084,10 @@ function DrillDown({ simId, state }: { simId: string; state: SimulationState }) 
     try {
       const res = await fetch(`/api/simulations/${simId}/refine`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getBYOKHeaders(),
+        },
         body: JSON.stringify({ question: q, message: q }),
       });
       const contentType = res.headers.get("content-type") || "";

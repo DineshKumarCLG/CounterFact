@@ -119,6 +119,45 @@ function buildMarkdown(state: SimulationState): string {
     }
   }
 
+  // Stakeholder Debate
+  if (state.stakeholderDebate) {
+    lines.push("## Stakeholder Perspectives");
+    lines.push("");
+    if (state.stakeholderDebate.summary) {
+      lines.push(state.stakeholderDebate.summary);
+      lines.push("");
+    }
+    if (state.stakeholderDebate.stakeholders?.length) {
+      for (const sh of state.stakeholderDebate.stakeholders) {
+        lines.push(`### ${sh.name} — ${sh.role} (${sh.tone})`);
+        lines.push("");
+        lines.push(sh.perspective);
+        lines.push("");
+        if (sh.keyArguments?.length) {
+          lines.push("**Key Arguments:**");
+          for (const arg of sh.keyArguments) {
+            lines.push(`- ${arg}`);
+          }
+          lines.push("");
+        }
+      }
+    }
+  }
+
+  // Visual Intelligence & Generated Media
+  if (state.generatedImages?.length) {
+    lines.push("## Visual Intelligence & Generated Media");
+    lines.push("");
+    for (const img of state.generatedImages) {
+      lines.push(`### ${img.altText || img.description}`);
+      lines.push("");
+      lines.push(`![${img.altText || img.description}](${img.url})`);
+      lines.push("");
+      lines.push(`*${img.description}* (${img.type})`);
+      lines.push("");
+    }
+  }
+
   // Cost
   lines.push("## Cost Summary");
   lines.push("");

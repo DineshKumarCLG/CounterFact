@@ -40,12 +40,26 @@ export const CONFIG = {
 
   // ─── Storage ────────────────────────────────────────────────────
   storage: {
-    dataDir: "./data",
-    dbPath: process.env.DB_PATH || (process.platform === "win32"
-      ? `${process.env.LOCALAPPDATA || process.env.TEMP || "."}/counterfact/counterfact.db`
-      : "/tmp/counterfact/counterfact.db"),
+    get dataDir(): string {
+      const envDir = process.env.DATA_DIR?.trim();
+      if (envDir && envDir !== "undefined") {
+        return envDir;
+      }
+      return process.env.VERCEL ? "/tmp/counterfact/data" : "./data";
+    },
+    get dbPath(): string {
+      const envPath = process.env.DB_PATH?.trim();
+      if (envPath && envPath !== "undefined") {
+        return envPath;
+      }
+      return (
+        process.platform === "win32"
+          ? `${process.env.LOCALAPPDATA || process.env.TEMP || "."}/counterfact/counterfact.db`
+          : "/tmp/counterfact/counterfact.db"
+      );
+    },
   },
-} as const;
+};
 
 /**
  * Calculate USD cost from token counts

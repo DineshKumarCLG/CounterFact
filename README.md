@@ -120,17 +120,21 @@ While the pipeline runs, callbacks update the state file for the safety check, t
 
 `GET /api/simulations/:id/stream` is a Server-Sent Events endpoint. It reads the state file once per second, sends the full state whenever `updatedAt` changes, and closes the stream when a synthesis exists or the scenario was blocked. The dashboard listens with `EventSource`.
 
-## LLM providers
+## LLM providers & BYOK (Bring Your Own Key)
 
-All agents go through `src/lib/llm/llm-client.ts`, which picks a provider from `LLM_PROVIDER`:
+All pipeline agents, safety validation, and conversational refinement route through `src/lib/llm/llm-client.ts`, supporting both server-side configuration via `LLM_PROVIDER` and per-request runtime overrides (BYOK):
 
-| `LLM_PROVIDER` | Backend |
-|---|---|
-| `bedrock` (default) | AWS Bedrock. Handles both the Anthropic message format and OpenAI-style models. The default model ID is `zai.glm-5`. Set `BEDROCK_MODEL_ID` to use another model, for example a Claude model. |
-| `gemini` | Google Gemini (`GEMINI_API_KEY`, optional `GEMINI_MODEL_ID`). |
-| `openrouter` | OpenRouter through the OpenAI SDK (`OPENROUTER_API_KEY`, optional `OPENROUTER_MODEL_ID`). |
+| Provider | `LLM_PROVIDER` | Environment Variables / BYOK Headers | Default Model |
+|---|---|---|---|
+| **AWS Bedrock** (default) | `bedrock` | AWS IAM credentials (`BEDROCK_MODEL_ID`) | `zai.glm-5` / Claude |
+| **Google Gemini** | `gemini` | `GEMINI_API_KEY` (`GEMINI_MODEL_ID`) | `gemini-2.0-flash` |
+| **OpenAI** | `openai` | `OPENAI_API_KEY` (`OPENAI_MODEL_ID`, `OPENAI_BASE_URL`) | `gpt-4o-mini` |
+| **Anthropic** | `anthropic` | `ANTHROPIC_API_KEY` (`ANTHROPIC_MODEL_ID`) | `claude-3-5-sonnet-latest` |
+| **NVIDIA NIM** | `nvidia` | `NVIDIA_API_KEY` (`NVIDIA_MODEL_ID`, `NVIDIA_BASE_URL`) | `meta/llama-3.3-70b-instruct` |
+| **OpenRouter** | `openrouter` | `OPENROUTER_API_KEY` (`OPENROUTER_MODEL_ID`) | `anthropic/claude-3.5-sonnet` |
 
-Two code paths still call Bedrock directly and ignore `LLM_PROVIDER`: the safety classifier and the `/refine` endpoint.
+### Interactive BYOK in the UI
+Users can click the provider pill in the navigation bar to configure their preferred LLM provider, enter their API key, and specify custom model IDs or base URLs. Credentials are stored securely in browser `localStorage` and sent via encrypted request headers (`x-byok-provider`, `x-byok-api-key`), ensuring zero secret leakage to disk or database.
 
 ## Tech stack
 

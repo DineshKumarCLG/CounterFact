@@ -200,6 +200,7 @@ export interface SimulationState {
   promptVersion: string;
   createdAt: string;
   updatedAt: string;
+  status?: string;
 }
 
 // ─── Stakeholder Debate ──────────────────────────────────────────

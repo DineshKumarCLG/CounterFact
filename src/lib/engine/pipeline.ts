@@ -10,6 +10,15 @@ import { generateVisualPromptImages } from "../llm/runware";
 import { searchWeb } from "../llm/search";
 import { getActiveDomains } from "../engine/domains";
 import { calculateCost, CONFIG } from "../engine/config";
+import * as llmClient from "../llm/llm-client";
+import type { BYOKConfig } from "../llm/llm-client";
+
+async function safeWithBYOKContext<T>(byok: BYOKConfig | undefined, fn: () => Promise<T>): Promise<T> {
+  if (typeof llmClient.withBYOKContext === "function") {
+    return llmClient.withBYOKContext(byok, fn);
+  }
+  return fn();
+}
 import type {
   SimulationState,
   AgentOutput,
@@ -46,9 +55,11 @@ export interface PipelineCallbacks {
 export async function runSimulation(
   scenario: string,
   callbacks: PipelineCallbacks = {},
-  simId?: string
+  simId?: string,
+  byok?: BYOKConfig
 ): Promise<SimulationState> {
-  const id = simId ?? uuidv4();
+  return safeWithBYOKContext(byok, async () => {
+    const id = simId ?? uuidv4();
   const costTracking: CostRecord = {
     totalInputTokens: 0,
     totalOutputTokens: 0,
@@ -98,6 +109,7 @@ export async function runSimulation(
       promptVersion: CONFIG.prompts.version,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      ...(byok ? { byok: { provider: byok.provider, modelId: byok.modelId } } : {}),
     };
   }
 
@@ -225,6 +237,7 @@ export async function runSimulation(
       promptVersion: CONFIG.prompts.version,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      ...(byok ? { byok: { provider: byok.provider, modelId: byok.modelId } } : {}),
     };
   }
 
@@ -327,5 +340,7 @@ export async function runSimulation(
     promptVersion: CONFIG.prompts.version,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    ...(byok ? { byok: { provider: byok.provider, modelId: byok.modelId } } : {}),
   };
+});
 }

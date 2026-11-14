@@ -78,6 +78,16 @@ export function saveSimulationMeta(record: SimulationRecord) {
   }
 }
 
+export function deleteSimulation(id: string): void {
+  const database = getDb();
+  if (!database) return;
+  try {
+    database.prepare("DELETE FROM simulations WHERE id = ?").run(id);
+  } catch (err) {
+    console.warn("[Storage:DB] Failed to delete simulation record from SQLite:", err);
+  }
+}
+
 export function getSimulationMeta(id: string): SimulationRecord | undefined {
   const database = getDb();
   if (database) {

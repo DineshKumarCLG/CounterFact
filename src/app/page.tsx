@@ -6,6 +6,7 @@ import { RefinedButton } from "@/components/ui/RefinedButton";
 import { RefinedCard } from "@/components/ui/RefinedCard";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { getBYOKHeaders } from "@/lib/byok-client";
 
 interface SimRecord {
   id: string;
@@ -34,9 +35,12 @@ function getTimeAgo(dateStr: string): string {
 
 const STATUS_COLORS: Record<string, string> = {
   COMPLETED: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+  COMPLETE: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+  PARTIAL: "text-amber-400 bg-amber-500/10 border-amber-500/20",
   RUNNING: "text-amber-400 bg-amber-500/10 border-amber-500/20",
   PENDING: "text-zinc-500 bg-zinc-500/10 border-zinc-500/20",
   FAILED: "text-red-400 bg-red-500/10 border-red-500/20",
+  BLOCKED: "text-red-400 bg-red-500/10 border-red-500/20",
 };
 
 const EXAMPLES = [
@@ -102,7 +106,10 @@ export default function Home() {
     try {
       const res = await fetch("/api/simulate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getBYOKHeaders(),
+        },
         body: JSON.stringify({ scenario }),
       });
       if (!res.ok) throw new Error("Failed");
