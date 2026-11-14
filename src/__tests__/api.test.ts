@@ -15,6 +15,22 @@ import { GET as exportGet } from "@/app/api/simulations/[id]/export/route";
 import * as filesystem from "@/lib/storage/filesystem";
 
 describe("API Endpoints", () => {
+  const createdSimIds: string[] = [];
+
+  afterEach(() => {
+    for (const id of createdSimIds) {
+      try {
+        deleteSimulation(id);
+      } catch {}
+      try {
+        const dir = join(CONFIG.storage.dataDir, "simulations", id);
+        if (existsSync(dir)) {
+          rmSync(dir, { recursive: true, force: true });
+        }
+      } catch {}
+    }
+    createdSimIds.length = 0;
+  });
   describe("GET /api/health", () => {
     it("returns 200 with ok status and runtime info", async () => {
       const res = await healthGet();
@@ -72,6 +88,9 @@ describe("API Endpoints", () => {
       const res = await simulatePost(req);
       expect(res.status).toBe(200);
       const json = await res.json();
+      if (json.id) {
+        createdSimIds.push(json.id);
+      }
       expect(json.id).toBeDefined();
       expect(typeof json.id).toBe("string");
       expect(json.id.length).toBeGreaterThan(10);

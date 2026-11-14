@@ -3,21 +3,24 @@ import { existsSync, readFileSync, rmSync } from "fs";
 import { join } from "path";
 import { execSync } from "child_process";
 
+// Track active background promises to prevent race conditions during afterEach
+export const pendingBackgroundTasks: Promise<unknown>[] = [];
+
 // Mock next/server's after() for unit and E2E test environment
 vi.mock("next/server", async (importOriginal) => {
   const actual = await importOriginal<typeof import("next/server")>();
   return {
     ...actual,
     after: vi.fn((cb: () => void | Promise<void>) => {
-      // Execute asynchronously in mock if needed
-      Promise.resolve().then(() => {
+      const taskPromise = Promise.resolve().then(async () => {
         try {
-          const res = cb();
-          if (res instanceof Promise) res.catch(() => {});
-        } catch {
-          // ignore background task errors in after() mock
+          await cb();
+        } catch (err) {
+          // Swallow or log background task errors in after() mock
         }
       });
+      pendingBackgroundTasks.push(taskPromise);
+      return taskPromise;
     }),
   };
 });
@@ -28,7 +31,18 @@ vi.mock("@/lib/llm/llm-client", async (importOriginal) => {
   return {
     ...actual,
     invokeLLM: vi.fn(),
-    invokeLLMJson: vi.fn(),
+    invokeLLMJson: vi.fn().mockResolvedValue({
+      data: {
+        scenarioSummary: "Default counterfactual scenario",
+        departurePoint: "AD 476",
+        domainWeights: { HISTORICAL: 0.8, MILITARY: 0.6 },
+        activeAgents: ["HISTORICAL", "MILITARY"],
+        baselineDataRequired: ["Historical records"],
+        clarificationQuestions: [],
+      },
+      inputTokens: 150,
+      outputTokens: 75,
+    }),
   };
 });
 
@@ -43,7 +57,8 @@ import { saveSimulationState, loadSimulationState } from "@/lib/storage/filesyst
 import { saveSimulationMeta, getSimulationMeta, deleteSimulation } from "@/lib/storage/db";
 import { CONFIG, calculateCost } from "@/lib/engine/config";
 import { runSimulation } from "@/lib/engine/pipeline";
-import { invokeLLM } from "@/lib/llm/llm-client";
+import { invokeLLM, invokeLLMJson } from "@/lib/llm/llm-client";
+import { branchExists, getBranchFileList, getBranchFile } from "./test-helpers";
 import type { SimulationState } from "@/lib/engine/types";
 
 import * as validator from "@/lib/safety/validator";
@@ -207,6 +222,7 @@ describe("Tier 3: Cross-Feature Interactions & Combinations (Pairwise Coverage)"
   beforeEach(() => {
     process.env = { ...originalEnv };
     vi.clearAllMocks();
+    pendingBackgroundTasks.length = 0;
 
     // Default mock for invokeLLM
     vi.mocked(invokeLLM).mockResolvedValue({
@@ -214,20 +230,48 @@ describe("Tier 3: Cross-Feature Interactions & Combinations (Pairwise Coverage)"
       inputTokens: 180,
       outputTokens: 90,
     });
+
+    // Default mock for invokeLLMJson
+    vi.mocked(invokeLLMJson).mockResolvedValue({
+      data: {
+        scenarioSummary: "Default counterfactual scenario",
+        departurePoint: "AD 476",
+        domainWeights: { HISTORICAL: 0.8, MILITARY: 0.6 },
+        activeAgents: ["HISTORICAL", "MILITARY"],
+        baselineDataRequired: ["Historical records"],
+        clarificationQuestions: [],
+      },
+      inputTokens: 150,
+      outputTokens: 75,
+    });
   });
 
-  afterEach(() => {
-    // Cleanup any created simulations on disk and in DB
+  afterEach(async () => {
+    // 1. Await and drain all pending background tasks before cleaning up
+    while (pendingBackgroundTasks.length > 0) {
+      const task = pendingBackgroundTasks.shift();
+      if (task) {
+        await task.catch(() => {});
+      }
+    }
+
+    // 2. Cleanup any created simulations on disk and in DB
     for (const id of createdTestIds) {
       try {
         deleteSimulation(id);
       } catch {}
-      try {
-        const dir = join(CONFIG.storage.dataDir, "simulations", id);
-        if (existsSync(dir)) {
-          rmSync(dir, { recursive: true, force: true });
-        }
-      } catch {}
+      const targetDirs = [
+        join(process.cwd(), "data", "simulations", id),
+        join("/tmp/counterfact/data", "simulations", id),
+        join(CONFIG.storage.dataDir, "simulations", id),
+      ];
+      for (const dir of targetDirs) {
+        try {
+          if (existsSync(dir)) {
+            rmSync(dir, { recursive: true, force: true });
+          }
+        } catch {}
+      }
     }
     createdTestIds.length = 0;
   });
@@ -249,6 +293,49 @@ describe("Tier 3: Cross-Feature Interactions & Combinations (Pairwise Coverage)"
         result: { status: "ALLOWED", reason: "Apollo 11 counterfactual", disclaimers: [] },
         inputTokens: 100,
         outputTokens: 50,
+      });
+
+      vi.spyOn(planner, "runPlanner").mockResolvedValueOnce({
+        output: {
+          scenarioSummary: "Apollo 11 deployed with Google Gemini onboard computer",
+          departurePoint: "1969",
+          domainWeights: { TECHNOLOGICAL: 0.8, HISTORICAL: 0.6 },
+          activeAgents: ["TECHNOLOGICAL", "HISTORICAL"],
+          baselineDataRequired: ["Apollo 11 mission telemetry"],
+          clarificationQuestions: [],
+        },
+        inputTokens: 200,
+        outputTokens: 100,
+      });
+
+      vi.spyOn(search, "searchWeb").mockResolvedValue([]);
+      vi.spyOn(specialistRunner, "runSpecialistAgent").mockImplementation(async (domain) => ({
+        output: {
+          domain,
+          findings: `${domain} findings under Gemini BYOK`,
+          keyDatapoints: [{ fact: "Telemetry processing accelerated", source: "NASA Archives", sourceTier: 1 }],
+          confidence: "HIGH",
+          sourceTiers: {},
+          contradictions: [],
+          cascadeSeeds: ["Seed"],
+          visualPrompts: [],
+        },
+        inputTokens: 250,
+        outputTokens: 125,
+      }));
+      vi.spyOn(guard, "runGuard").mockImplementation(async (out) => ({
+        result: { domain: out.domain, passed: true, issues: [], sanitised: false },
+        inputTokens: 100,
+        outputTokens: 50,
+      }));
+      vi.spyOn(synthesis, "runSynthesis").mockResolvedValueOnce({
+        output: {
+          overallConfidence: "HIGH",
+          unifiedAnalysis: "Gemini AI onboard guidance streamlined lunar module rendezvous trajectories.",
+          contradictions: [],
+        },
+        inputTokens: 300,
+        outputTokens: 150,
       });
 
       const simReq = new Request("http://localhost:3000/api/simulate", {

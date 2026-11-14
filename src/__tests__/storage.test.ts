@@ -41,6 +41,9 @@ describe("Storage Engine", () => {
   };
 
   afterEach(() => {
+    try {
+      deleteSimulation(testId);
+    } catch {}
     if (existsSync(testDir)) {
       rmSync(testDir, { recursive: true, force: true });
     }

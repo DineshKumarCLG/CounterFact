@@ -3,6 +3,7 @@ import { POST as simulatePost } from "@/app/api/simulate/route";
 import { POST as refinePost } from "@/app/api/simulations/[id]/refine/route";
 import { GET as healthGet } from "@/app/api/health/route";
 import { loadSimulationState, saveSimulationState } from "@/lib/storage/filesystem";
+import { deleteSimulation } from "@/lib/storage/db";
 import { CONFIG } from "@/lib/engine/config";
 import * as llmClient from "@/lib/llm/llm-client";
 import type { SimulationState } from "@/lib/engine/types";
@@ -30,6 +31,9 @@ describe("Milestone 2: Bring-Your-Own-Key (BYOK) Multi-Provider Backend", () => 
 
   afterEach(() => {
     for (const id of testIds) {
+      try {
+        deleteSimulation(id);
+      } catch {}
       const dir = join(CONFIG.storage.dataDir, "simulations", id);
       if (existsSync(dir)) {
         try {
@@ -39,6 +43,7 @@ describe("Milestone 2: Bring-Your-Own-Key (BYOK) Multi-Provider Backend", () => 
         }
       }
     }
+    testIds.length = 0;
   });
 
   describe("POST /api/simulate — BYOK Ingestion & Validation", () => {
