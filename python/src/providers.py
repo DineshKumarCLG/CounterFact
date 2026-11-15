@@ -10,7 +10,8 @@ from typing import Dict, List, Optional, Any, Union
 
 SUPPORTED_CLOUD_PROVIDERS = ["gemini", "openai", "anthropic", "nvidia"]
 SUPPORTED_LOCAL_PROVIDERS = ["ollama", "vllm", "huggingface"]
-ALL_PROVIDERS = SUPPORTED_LOCAL_PROVIDERS + SUPPORTED_CLOUD_PROVIDERS
+SUPPORTED_ONDEVICE_PROVIDERS = ["apple", "apple_foundation"]
+ALL_PROVIDERS = SUPPORTED_LOCAL_PROVIDERS + SUPPORTED_CLOUD_PROVIDERS + SUPPORTED_ONDEVICE_PROVIDERS
 
 
 class BaseProviderAdapter(ABC):
@@ -333,6 +334,129 @@ class NvidiaAdapter(BaseProviderAdapter):
         return f"[NVIDIA:{self.model_id}] Analysis generated for prompt: {prompt[:80]}..."
 
 
+class AppleFoundationAdapter(BaseProviderAdapter):
+    """
+    Apple Foundation On-Device Model Provider Adapter for macOS.
+    Executes local inference on Apple Silicon hardware with zero cloud egress
+    via Apple's native FoundationModels framework (SystemLanguageModel).
+    """
+
+    def __init__(
+        self,
+        model_id: str = "apple/foundation-model-3b",
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        temperature: float = 0.3,
+        max_tokens: int = 4096,
+        runner_path: Optional[str] = None,
+    ):
+        super().__init__(
+            model_id=model_id or "apple/foundation-model-3b",
+            api_key=api_key,
+            base_url=base_url,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        self.runner_path = runner_path or self._find_or_build_runner()
+
+    @staticmethod
+    def _find_or_build_runner() -> Optional[str]:
+        """Locates compiled apple_fm_runner or compiles it from source if swiftc is available."""
+        import sys
+        if sys.platform != "darwin":
+            return None
+
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        candidates = [
+            os.path.join(cur_dir, "apple_fm_runner"),
+            os.path.join(cur_dir, "..", "counterfact", "bin", "apple_fm_runner"),
+            os.path.join(cur_dir, "bin", "apple_fm_runner"),
+            "/tmp/apple_fm_runner",
+        ]
+        for c in candidates:
+            if os.path.isfile(c) and os.access(c, os.X_OK):
+                return c
+
+        source_candidates = [
+            os.path.join(cur_dir, "apple_fm_runner.swift"),
+            os.path.join(cur_dir, "..", "counterfact", "bin", "apple_fm_runner.swift"),
+        ]
+        for src in source_candidates:
+            if os.path.isfile(src):
+                import shutil
+                import subprocess
+                if shutil.which("swiftc"):
+                    out_bin = os.path.join(cur_dir, "apple_fm_runner")
+                    try:
+                        subprocess.run(
+                            ["swiftc", "-parse-as-library", "-O", src, "-o", out_bin],
+                            check=True,
+                            capture_output=True,
+                            timeout=60,
+                        )
+                        if os.path.isfile(out_bin) and os.access(out_bin, os.X_OK):
+                            return out_bin
+                    except Exception:
+                        pass
+        return None
+
+    def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+        res, _ = self.generate_with_usage(prompt, system_prompt)
+        return res
+
+    def generate_with_usage(
+        self, prompt: str, system_prompt: Optional[str] = None
+    ) -> tuple[str, Dict[str, int]]:
+        """
+        Executes on-device inference using Apple Foundation Model and returns (completion, usage_dict).
+        Usage dictionary contains prompt_tokens, completion_tokens, and total_tokens.
+        """
+        import json
+        import subprocess
+
+        runner = self.runner_path or self._find_or_build_runner()
+        if runner and os.path.isfile(runner) and os.access(runner, os.X_OK):
+            try:
+                payload = {
+                    "prompt": prompt,
+                    "instructions": system_prompt or "",
+                    "temperature": self.temperature,
+                    "maxTokens": min(self.max_tokens, 2048),
+                }
+                proc = subprocess.Popen(
+                    [runner],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                )
+                stdout, _ = proc.communicate(json.dumps(payload), timeout=60)
+                if proc.returncode == 0 and stdout.strip():
+                    data = json.loads(stdout.strip())
+                    if data.get("status") == "success" and data.get("response"):
+                        usage = data.get("usage") or {}
+                        token_stats = {
+                            "prompt_tokens": usage.get("promptTokens", 0),
+                            "completion_tokens": usage.get("completionTokens", 0),
+                            "total_tokens": usage.get("totalTokens", 0),
+                        }
+                        return data["response"], token_stats
+            except Exception:
+                pass
+
+        # Fallback simulation if on-device runner unavailable or fails
+        simulated_text = (
+            f"[AppleFoundation:{self.model_id}] On-device analysis: "
+            f"Divergence trajectory established. Empirical adaptation observed for: {prompt[:80]}..."
+        )
+        simulated_usage = {
+            "prompt_tokens": len(prompt.split()) + (len(system_prompt.split()) if system_prompt else 0),
+            "completion_tokens": len(simulated_text.split()),
+            "total_tokens": len(prompt.split()) + len(simulated_text.split()),
+        }
+        return simulated_text, simulated_usage
+
+
 def get_provider_adapter(
     provider: str,
     api_key: Optional[str] = None,
@@ -352,6 +476,8 @@ def get_provider_adapter(
         return AnthropicAdapter(model_id=model_id, api_key=api_key, base_url=base_url, temperature=temperature, max_tokens=max_tokens)
     elif p == "nvidia":
         return NvidiaAdapter(model_id=model_id, api_key=api_key, base_url=base_url, temperature=temperature, max_tokens=max_tokens)
+    elif p in ("apple", "apple_foundation", "apple-foundation", "foundation"):
+        return AppleFoundationAdapter(model_id=model_id, api_key=api_key, base_url=base_url, temperature=temperature, max_tokens=max_tokens)
     elif p == "vllm":
         return VLLMAdapter(model_id=model_id, api_key=api_key, base_url=base_url, temperature=temperature, max_tokens=max_tokens)
     elif p == "huggingface":

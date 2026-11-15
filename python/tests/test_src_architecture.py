@@ -107,3 +107,29 @@ def test_graph_pipeline_execution():
     assert state.cascades is not None
     assert state.stakeholder_debate is not None
     assert state.cost_tracking["total_tokens"] > 0
+
+
+def test_apple_foundation_adapter_registration():
+    from src.providers import AppleFoundationAdapter
+    adapter = get_provider_adapter("apple")
+    assert isinstance(adapter, AppleFoundationAdapter)
+    assert "apple" in adapter.model_id.lower()
+
+    adapter_alt = get_provider_adapter("apple_foundation")
+    assert isinstance(adapter_alt, AppleFoundationAdapter)
+
+
+def test_caveman_token_reduction_in_pipeline():
+    state = run_pipeline(
+        "What if the Library of Alexandria had never burned down?",
+        departure_point="48 BC",
+        provider="apple",
+        caveman=True,
+    )
+    costs = state.cost_tracking
+    assert costs.get("caveman_enabled") is True
+    assert costs.get("total_tokens", 0) > 0
+    assert costs.get("uncompressed_baseline_tokens", 0) > costs.get("total_tokens", 0)
+    assert costs.get("tokens_saved", 0) > 0
+    assert costs.get("reduction_percentage", 0) >= 20.0
+

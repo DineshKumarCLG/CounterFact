@@ -52,3 +52,6 @@ COUNTERFACT_PDR_*.md
 CLAUDE.md
 AGENTS.md
 __pycache__/
+*.pyc
+python/src/apple_fm_runner
+.pytest_cache/

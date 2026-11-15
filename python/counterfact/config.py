@@ -35,6 +35,8 @@ def get_default_config() -> ProviderConfig:
     elif provider == "anthropic":
         api_key = os.getenv("ANTHROPIC_API_KEY")
         model_id = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-latest")
+    elif provider in ("apple", "apple_foundation", "apple-foundation"):
+        model_id = os.getenv("APPLE_MODEL", "apple/foundation-model-3b")
     elif provider == "nvidia":
         api_key = os.getenv("NVIDIA_API_KEY")
         model_id = os.getenv("NVIDIA_MODEL", "meta/llama-3.3-70b-instruct")
