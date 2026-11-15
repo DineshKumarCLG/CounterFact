@@ -86,7 +86,12 @@ export const AgentOutputSchema = z.object({
   keyDatapoints: z.array(DataPointSchema).default([]),
   confidence: ConfidenceLevel,
   sourceTiers: z.record(z.string(), z.unknown()).default({}),
-  contradictions: z.array(z.string()).default([]),
+  contradictions: z.array(
+    z.union([
+      z.string(),
+      z.object({ description: z.string() }).transform((o) => o.description),
+    ])
+  ).default([]),
   cascadeSeeds: z.array(z.string()).default([]),
   visualPrompts: z.array(VisualPromptSchema).default([]),
   selfCritique: SelfCritiqueSchema.optional(),
@@ -120,11 +125,18 @@ export const GuardResultSchema = z.object({
 export type GuardResult = z.infer<typeof GuardResultSchema>;
 
 // ─── Synthesis Output ────────────────────────────────────────────
-export const ContradictionResolutionSchema = z.object({
-  description: z.string(),
-  mode: z.enum(["RESOLVED", "NUANCED", "UNRESOLVED_TENSION"]),
-  resolution: z.string(),
-});
+export const ContradictionResolutionSchema = z.union([
+  z.object({
+    description: z.string(),
+    mode: z.enum(["RESOLVED", "NUANCED", "UNRESOLVED_TENSION"]),
+    resolution: z.string(),
+  }),
+  z.string().transform((s) => ({
+    description: s,
+    mode: "RESOLVED" as const,
+    resolution: s,
+  })),
+]);
 
 export const SynthesisOutputSchema = z.object({
   unifiedAnalysis: z.string(),

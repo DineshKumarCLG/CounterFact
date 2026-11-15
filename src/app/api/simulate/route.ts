@@ -17,6 +17,7 @@ const DEFAULT_VALID_PROVIDERS = [
   "anthropic",
   "nvidia",
   "openrouter",
+  "apple",
 ] as const;
 
 function safeExtractBYOK(request?: Request, body?: Record<string, unknown>) {
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
         );
       }
 
-      if (byok.provider !== "bedrock" && !byok.apiKey && !safeGetEnvKey(byok.provider)) {
+      if (byok.provider !== "bedrock" && byok.provider !== "apple" && !byok.apiKey && !safeGetEnvKey(byok.provider)) {
         return NextResponse.json(
           { error: `API key required for provider ${byok.provider}` },
           { status: 400 }

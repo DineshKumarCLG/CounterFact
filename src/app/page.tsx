@@ -11,6 +11,7 @@ import {
   getBYOKConfig,
   getBYOKHeaders,
   PROVIDER_OPTIONS,
+  ALL_PROVIDER_OPTIONS,
   type BYOKConfig,
   BYOK_STORAGE_KEY,
   LEGACY_STORAGE_KEY,
@@ -144,8 +145,8 @@ export default function Home() {
   }
 
   const activeProvider = byok?.provider
-    ? PROVIDER_OPTIONS.find((p) => p.id === byok.provider) || PROVIDER_OPTIONS[0]
-    : PROVIDER_OPTIONS[0];
+    ? ALL_PROVIDER_OPTIONS.find((p) => p.id === byok.provider) || ALL_PROVIDER_OPTIONS[0]
+    : ALL_PROVIDER_OPTIONS[0];
 
   const isCustomByok = byok && byok.provider !== "bedrock";
 

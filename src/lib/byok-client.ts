@@ -10,7 +10,8 @@ export type BYOKProvider =
   | "openai"
   | "anthropic"
   | "nvidia"
-  | "openrouter";
+  | "openrouter"
+  | "apple";
 
 export interface ClientBYOKConfig {
   provider: BYOKProvider;
@@ -90,6 +91,17 @@ export const PROVIDER_OPTIONS: Array<{
     requiresKey: true,
   },
 ];
+
+export const APPLE_PROVIDER_OPTION = {
+  id: "apple" as const,
+  name: "Apple Foundation (On-Device)",
+  badge: "On-Device",
+  defaultModel: "apple/foundation-model-3b",
+  description: "Apple Silicon on-device foundation model with zero cloud egress & Caveman compression",
+  requiresKey: false,
+};
+
+export const ALL_PROVIDER_OPTIONS = [...PROVIDER_OPTIONS, APPLE_PROVIDER_OPTION];
 
 const STORAGE_KEY = "cf_byok_config";
 

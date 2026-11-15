@@ -13,7 +13,8 @@ export type BYOKProvider =
   | "openai"
   | "anthropic"
   | "nvidia"
-  | "openrouter";
+  | "openrouter"
+  | "apple";
 
 export interface BYOKConfig {
   provider: BYOKProvider;
@@ -95,6 +96,19 @@ export const PROVIDER_OPTIONS: ProviderMeta[] = [
     docsUrl: "https://openrouter.ai/keys",
   },
 ];
+
+export const APPLE_PROVIDER_OPTION: ProviderMeta = {
+  id: "apple",
+  name: "Apple Foundation (On-Device)",
+  badge: "On-Device",
+  defaultModel: "apple/foundation-model-3b",
+  description: "Apple Silicon on-device foundation model with zero cloud egress & Caveman compression",
+  requiresKey: false,
+  placeholderKey: "No key needed (runs locally on Apple Silicon)",
+  docsUrl: "https://developer.apple.com/machine-learning/",
+};
+
+export const ALL_PROVIDER_OPTIONS: ProviderMeta[] = [...PROVIDER_OPTIONS, APPLE_PROVIDER_OPTION];
 
 export const BYOK_STORAGE_KEY = "counterfact_byok_config";
 export const LEGACY_STORAGE_KEY = "cf_byok_config";
@@ -217,7 +231,7 @@ export function BYOKModal({ isOpen, onClose }: BYOKModalProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  const activeProvider = PROVIDER_OPTIONS.find((p) => p.id === provider) || PROVIDER_OPTIONS[0];
+  const activeProvider = ALL_PROVIDER_OPTIONS.find((p) => p.id === provider) || ALL_PROVIDER_OPTIONS[0];
 
   const handleValidateKey = async () => {
     if (!activeProvider.requiresKey) {
@@ -361,7 +375,7 @@ export function BYOKModal({ isOpen, onClose }: BYOKModalProps) {
                 Select Model Provider
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {PROVIDER_OPTIONS.map((opt) => {
+                {ALL_PROVIDER_OPTIONS.map((opt) => {
                   const isSelected = provider === opt.id;
                   return (
                     <button
@@ -554,6 +568,20 @@ export function BYOKModal({ isOpen, onClose }: BYOKModalProps) {
                       <span>{validationMessage || "Validation failed."}</span>
                     </motion.div>
                   )}
+                </div>
+              ) : provider === "apple" ? (
+                <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs text-zinc-300 space-y-1.5">
+                  <div className="font-medium text-white flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                    <span>Apple Foundation Model (Local On-Device)</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-300 leading-relaxed">
+                    Runs 100% locally on your Mac's Apple Silicon hardware via Apple's native <code>FoundationModels</code> framework with <strong>zero cloud egress</strong> and <strong>Caveman prompt compression</strong> enabled. No API key or cloud network connection needed.
+                  </p>
+                  <div className="pt-1 flex items-center gap-2 text-[10px] text-purple-300/80 font-mono">
+                    <span className="px-1.5 py-0.5 rounded bg-purple-500/20 border border-purple-500/30">SystemLanguageModel.default</span>
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/30 text-emerald-300">~40% Token Savings</span>
+                  </div>
                 </div>
               ) : (
                 <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-xs text-zinc-400 space-y-1">

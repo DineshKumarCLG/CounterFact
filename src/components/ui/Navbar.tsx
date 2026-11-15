@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import {
   BYOKModal,
   PROVIDER_OPTIONS,
+  ALL_PROVIDER_OPTIONS,
   type BYOKConfig,
   BYOK_STORAGE_KEY,
   LEGACY_STORAGE_KEY,
@@ -54,8 +55,8 @@ export function Navbar() {
   }
 
   const activeProvider = byok?.provider
-    ? PROVIDER_OPTIONS.find((p) => p.id === byok.provider) || PROVIDER_OPTIONS[0]
-    : PROVIDER_OPTIONS[0];
+    ? ALL_PROVIDER_OPTIONS.find((p) => p.id === byok.provider) || ALL_PROVIDER_OPTIONS[0]
+    : ALL_PROVIDER_OPTIONS[0];
 
   const isCustomByok = byok && byok.provider !== "bedrock";
 
@@ -116,7 +117,7 @@ export function Navbar() {
                     : "bg-white/[0.06] text-zinc-400"
                 }`}
               >
-                {isCustomByok ? "BYOK" : "API Keys"}
+                {isCustomByok ? (byok?.provider === "apple" ? "On-Device" : "BYOK") : "API Keys"}
               </span>
             </button>
 

@@ -12,6 +12,7 @@ const VALID_PROVIDERS = [
   "anthropic",
   "nvidia",
   "openrouter",
+  "apple",
 ] as const;
 
 type Provider = (typeof VALID_PROVIDERS)[number];

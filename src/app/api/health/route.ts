@@ -58,6 +58,8 @@ export async function GET(request?: Request) {
     model = process.env.NVIDIA_MODEL_ID ?? "meta/llama-3.3-70b-instruct";
   } else if (activeProvider === "openrouter") {
     model = process.env.OPENROUTER_MODEL_ID ?? "anthropic/claude-3.5-sonnet";
+  } else if (activeProvider === "apple") {
+    model = process.env.APPLE_MODEL_ID ?? "apple/foundation-model-3b";
   }
 
   const responsePayload: Record<string, unknown> = {
