@@ -125,18 +125,66 @@ export const GuardResultSchema = z.object({
 export type GuardResult = z.infer<typeof GuardResultSchema>;
 
 // ─── Synthesis Output ────────────────────────────────────────────
-export const ContradictionResolutionSchema = z.union([
-  z.object({
-    description: z.string(),
-    mode: z.enum(["RESOLVED", "NUANCED", "UNRESOLVED_TENSION"]),
-    resolution: z.string(),
-  }),
-  z.string().transform((s) => ({
-    description: s,
-    mode: "RESOLVED" as const,
-    resolution: s,
-  })),
-]);
+const ContradictionModeEnum = z.preprocess((val) => {
+  if (typeof val === "string") {
+    const upper = val.toUpperCase().trim();
+    if (upper === "RESOLVED" || upper === "NUANCED" || upper === "UNRESOLVED_TENSION") {
+      return upper;
+    }
+    if (upper.includes("NUANCE")) return "NUANCED";
+    if (upper.includes("TENSION") || upper.includes("UNRESOLV")) return "UNRESOLVED_TENSION";
+  }
+  return "RESOLVED";
+}, z.enum(["RESOLVED", "NUANCED", "UNRESOLVED_TENSION"]));
+
+export const ContradictionResolutionSchema = z.preprocess((val) => {
+  if (typeof val === "string") {
+    return {
+      description: val,
+      mode: "RESOLVED",
+      resolution: val,
+    };
+  }
+  if (val && typeof val === "object") {
+    const obj = val as Record<string, unknown>;
+    const description =
+      typeof obj.description === "string" && obj.description
+        ? obj.description
+        : typeof obj.issue === "string"
+        ? obj.issue
+        : typeof obj.pattern === "string"
+        ? obj.pattern
+        : typeof obj.title === "string"
+        ? obj.title
+        : JSON.stringify(val);
+
+    const resolution =
+      typeof obj.resolution === "string" && obj.resolution
+        ? obj.resolution
+        : typeof obj.explanation === "string"
+        ? obj.explanation
+        : typeof obj.notes === "string"
+        ? obj.notes
+        : typeof obj.description === "string"
+        ? obj.description
+        : description;
+
+    return {
+      description,
+      mode: obj.mode || "RESOLVED",
+      resolution,
+    };
+  }
+  return {
+    description: "Contradiction identified during cross-domain analysis",
+    mode: "RESOLVED",
+    resolution: "Resolved via cross-domain synthesis",
+  };
+}, z.object({
+  description: z.string(),
+  mode: ContradictionModeEnum,
+  resolution: z.string(),
+}));
 
 export const SynthesisOutputSchema = z.object({
   unifiedAnalysis: z.string(),
@@ -217,11 +265,21 @@ export interface SimulationState {
 
 // ─── Stakeholder Debate ──────────────────────────────────────────
 export const StakeholderPositionSchema = z.object({
-  name: z.string(),
-  role: z.string(),
-  perspective: z.string(),
-  keyArguments: z.array(z.string()),
-  tone: z.enum(["SUPPORTIVE", "OPPOSED", "CAUTIOUS", "NEUTRAL", "PRAGMATIC"]),
+  name: z.string().default("Stakeholder"),
+  role: z.string().default("Representative"),
+  perspective: z.string().default("Perspective on scenario dynamics"),
+  keyArguments: z.array(z.string()).default([]),
+  tone: z.preprocess((val) => {
+    if (typeof val === "string") {
+      const u = val.toUpperCase().trim();
+      if (["SUPPORTIVE", "OPPOSED", "CAUTIOUS", "NEUTRAL", "PRAGMATIC"].includes(u)) {
+        return u;
+      }
+      if (u === "HAWKISH") return "OPPOSED";
+      if (u === "DOVISH" || u === "FAVORABLE") return "SUPPORTIVE";
+    }
+    return "PRAGMATIC";
+  }, z.enum(["SUPPORTIVE", "OPPOSED", "CAUTIOUS", "NEUTRAL", "PRAGMATIC"])),
 });
 export type StakeholderPosition = z.infer<typeof StakeholderPositionSchema>;
 
@@ -235,25 +293,37 @@ export type StakeholderDebate = z.infer<typeof StakeholderDebateSchema>;
 export const CascadeNodeSchema = z.object({
   id: z.string(),
   description: z.string(),
-  domain: z.enum(DOMAINS),
-  confidence: z.number().min(0).max(1),
-  level: z.number().int().min(0),
-  type: z.enum(["POSITIVE", "NEGATIVE", "NEUTRAL"]),
+  domain: z.preprocess((val) => {
+    if (typeof val === "string") {
+      const u = val.toUpperCase().trim();
+      if (DOMAINS.includes(u as Domain)) return u;
+    }
+    return "TECHNOLOGICAL";
+  }, z.enum(DOMAINS)),
+  confidence: z.coerce.number().min(0).max(1).default(0.8),
+  level: z.coerce.number().int().min(0).default(0),
+  type: z.preprocess((val) => {
+    if (typeof val === "string") {
+      const u = val.toUpperCase().trim();
+      if (u === "POSITIVE" || u === "NEGATIVE" || u === "NEUTRAL") return u;
+    }
+    return "NEUTRAL";
+  }, z.enum(["POSITIVE", "NEGATIVE", "NEUTRAL"])),
 });
 export type CascadeNode = z.infer<typeof CascadeNodeSchema>;
 
 export const CascadeEdgeSchema = z.object({
   from: z.string(),
   to: z.string(),
-  confidence: z.number().min(0).max(1),
-  reasoning: z.string(),
+  confidence: z.coerce.number().min(0).max(1).default(0.8),
+  reasoning: z.string().default("Causal interaction"),
 });
 export type CascadeEdge = z.infer<typeof CascadeEdgeSchema>;
 
 export const FeedbackLoopSchema = z.object({
   nodes: z.array(z.string()),
   description: z.string(),
-  breakpoint: z.string(),
+  breakpoint: z.string().default("Dynamic stabilization"),
 });
 export type FeedbackLoop = z.infer<typeof FeedbackLoopSchema>;
 
@@ -265,16 +335,29 @@ export const CascadeTreeSchema = z.object({
 export type CascadeTree = z.infer<typeof CascadeTreeSchema>;
 
 export const ScenarioPathSchema = z.object({
-  type: z.enum(["OPTIMISTIC", "BASE_CASE", "PESSIMISTIC"]),
-  label: z.string(),
-  summary: z.string(),
+  type: z.preprocess((val) => {
+    if (typeof val === "string") {
+      const u = val.toUpperCase().trim();
+      if (u === "OPTIMISTIC" || u === "BASE_CASE" || u === "PESSIMISTIC") return u;
+      if (u === "PRIMARY") return "BASE_CASE";
+    }
+    return "BASE_CASE";
+  }, z.enum(["OPTIMISTIC", "BASE_CASE", "PESSIMISTIC"])),
+  label: z.string().default("Projected Path"),
+  summary: z.string().default("Projected development timeline"),
   keyMilestones: z.array(
     z.object({
-      year: z.number(),
+      year: z.coerce.number().default(50),
       event: z.string(),
-      domain: z.enum(DOMAINS),
+      domain: z.preprocess((val) => {
+        if (typeof val === "string") {
+          const u = val.toUpperCase().trim();
+          if (DOMAINS.includes(u as Domain)) return u;
+        }
+        return "TECHNOLOGICAL";
+      }, z.enum(DOMAINS)),
     })
-  ),
+  ).default([]),
 });
 export type ScenarioPath = z.infer<typeof ScenarioPathSchema>;
 
