@@ -4,26 +4,63 @@ import { dirname, join } from "path";
 import { CONFIG } from "../engine/config";
 
 let db: Database.Database | null = null;
+let currentDbPath: string | null = null;
 let dbFailed = false;
 
-function getDb(): Database.Database | null {
-  if (dbFailed) return null;
+/**
+ * Closes the active SQLite connection and resets connection state.
+ * Allows safe switching of database files and prevents file-lock leaks in tests.
+ */
+export function closeDb(): void {
+  if (db) {
+    try {
+      db.close();
+    } catch {
+      // Ignore close errors on tear-down
+    }
+  }
+  db = null;
+  currentDbPath = null;
+  dbFailed = false;
+}
+
+/**
+ * Retrieves or establishes the SQLite database connection.
+ * Automatically reconnects if CONFIG.storage.dbPath has changed dynamically.
+ */
+export function getDb(): Database.Database | null {
+  const targetPath = CONFIG.storage.dbPath;
+
+  // If path changed dynamically (e.g. process.env.DB_PATH override in tests), close previous connection
+  if (db && currentDbPath !== targetPath) {
+    closeDb();
+  }
+
+  // If target path previously failed to initialize, do not retry indefinitely
+  if (dbFailed && currentDbPath === targetPath) {
+    return null;
+  }
+
   if (!db) {
     try {
-      const dbDir = dirname(CONFIG.storage.dbPath);
+      const dbDir = dirname(targetPath);
       if (!existsSync(dbDir)) {
         mkdirSync(dbDir, { recursive: true });
       }
 
-      db = new Database(CONFIG.storage.dbPath);
+      db = new Database(targetPath);
       db.pragma("journal_mode = WAL");
       initSchema(db);
+      currentDbPath = targetPath;
+      dbFailed = false;
     } catch (err) {
-      console.warn("[Storage:DB] Failed to initialize SQLite database:", err);
+      console.warn("[Storage:DB] Failed to initialize SQLite database at", targetPath, err);
       dbFailed = true;
+      currentDbPath = targetPath;
       return null;
     }
   }
+
   return db;
 }
 

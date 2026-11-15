@@ -62,13 +62,15 @@ export const CONFIG = {
 };
 
 /**
- * Calculate USD cost from token counts
+ * Calculate USD cost from token counts, clamping negative token inputs safely to zero.
  */
 export function calculateCost(inputTokens: number, outputTokens: number) {
+  const safeInputTokens = Math.max(0, inputTokens);
+  const safeOutputTokens = Math.max(0, outputTokens);
   const inputCost =
-    (inputTokens / 1_000_000) * CONFIG.costs.inputTokenCostPerMillion;
+    (safeInputTokens / 1_000_000) * CONFIG.costs.inputTokenCostPerMillion;
   const outputCost =
-    (outputTokens / 1_000_000) * CONFIG.costs.outputTokenCostPerMillion;
+    (safeOutputTokens / 1_000_000) * CONFIG.costs.outputTokenCostPerMillion;
   return {
     inputCostUsd: Math.round(inputCost * 10000) / 10000,
     outputCostUsd: Math.round(outputCost * 10000) / 10000,

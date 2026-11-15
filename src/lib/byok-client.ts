@@ -19,6 +19,20 @@ export interface ClientBYOKConfig {
   baseUrl?: string;
 }
 
+export interface ModelPreset {
+  id: string;
+  label: string;
+  tag: string;
+  description?: string;
+}
+
+export const OPENROUTER_PRESETS: ModelPreset[] = [
+  { id: "google/gemini-2.0-flash-exp:free", label: "Gemini 2.0 Flash (Free)", tag: "Recommended Free" },
+  { id: "meta-llama/llama-3.3-70b-instruct", label: "Llama 3.3 70B", tag: "Fast & Capable" },
+  { id: "anthropic/claude-3.5-sonnet", label: "Claude 3.5 Sonnet", tag: "Frontier Default" },
+  { id: "openai/gpt-4o-mini", label: "GPT-4o Mini", tag: "Low Cost" },
+];
+
 export const PROVIDER_OPTIONS: Array<{
   id: BYOKProvider;
   name: string;

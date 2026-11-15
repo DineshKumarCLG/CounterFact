@@ -34,7 +34,7 @@ export default function RootLayout({
         <Providers>
           <a href="#main-content" className="skip-link">Skip to content</a>
           <Navbar />
-          <main id="main-content" className="flex-1 max-w-5xl mx-auto w-full px-6 py-8">
+          <main id="main-content" className="flex-1 w-full flex flex-col min-h-0">
             {children}
           </main>
         </Providers>

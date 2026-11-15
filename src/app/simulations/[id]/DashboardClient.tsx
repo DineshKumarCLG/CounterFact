@@ -9,7 +9,7 @@ import type {
 } from "@/lib/engine/types";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { getBYOKHeaders } from "@/lib/byok-client";
+import { BYOKModal, getBYOKConfig, getBYOKHeaders } from "@/components/ui/BYOKModal";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
@@ -606,8 +606,8 @@ function ImpactMap({ state }: { state: SimulationState }) {
                 className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/50 border border-white/[0.05] hover:border-white/12 hover:bg-black/70 backdrop-blur-xl transition-all group">
                 <div className="w-1.5 h-1.5 rounded-full transition-shadow"
                   style={{ background: imp.color, boxShadow: `0 0 6px ${imp.color}60` }} />
-                <span className="text-[10px] font-mono text-zinc-500 group-hover:text-zinc-300 transition-colors">{label}</span>
-                <span className="text-[9px] font-mono text-zinc-700">{pct}%</span>
+                <span className="text-[10px] font-mono text-zinc-400 group-hover:text-zinc-200 transition-colors">{label}</span>
+                <span className="text-[9px] font-mono text-zinc-400">{pct}%</span>
               </button>
             );
           })}
@@ -868,7 +868,7 @@ function DomainsTab({ state }: { state: SimulationState }) {
                         <div className="space-y-2">
                           {out.keyDatapoints.slice(0, 6).map((dp, i) => (
                             <div key={i} className="flex gap-3 text-[11px]">
-                              <span className="text-zinc-700 font-mono shrink-0 mt-0.5">{String(i+1).padStart(2,"0")}</span>
+                              <span className="text-zinc-400 font-mono shrink-0 mt-0.5">{String(i+1).padStart(2,"0")}</span>
                               <div>
                                 <span className="text-zinc-300">{dp.fact}</span>
                                 {dp.source && <span className="text-zinc-600 ml-2">— {dp.source}</span>}
@@ -1041,7 +1041,7 @@ function StakeholdersTab({ state }: { state: SimulationState }) {
                   <ul className="space-y-1">
                     {s.keyArguments.slice(0, 3).map((a, ai) => (
                       <li key={ai} className="flex gap-2 text-[10px] text-zinc-500">
-                        <span className="text-zinc-700 shrink-0">›</span>
+                        <span className="text-zinc-400 shrink-0">›</span>
                         <span>{a}</span>
                       </li>
                     ))}
@@ -1082,21 +1082,39 @@ function DrillDown({ simId, state }: { simId: string; state: SimulationState }) 
     let buf = "";
     setMsgs(prev => [...prev, { role: "assistant", content: "" }]);
     try {
+      const activeByok = getBYOKConfig();
+      const byokPayload = activeByok && activeByok.provider !== "bedrock" ? {
+        provider: activeByok.provider,
+        apiKey: activeByok.apiKey,
+        modelId: activeByok.modelId,
+        baseUrl: activeByok.baseUrl,
+      } : undefined;
+
       const res = await fetch(`/api/simulations/${simId}/refine`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...getBYOKHeaders(),
         },
-        body: JSON.stringify({ question: q, message: q }),
+        body: JSON.stringify({
+          question: q,
+          message: q,
+          ...(byokPayload ? { byok: byokPayload } : {}),
+        }),
       });
+
       const contentType = res.headers.get("content-type") || "";
       if (contentType.includes("application/json")) {
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.error) {
+          throw new Error(data.details || data.error || `Engine error (${res.status})`);
+        }
         const reply = data.answer ?? data.content ?? "";
         setMsgs(prev => { const n = [...prev]; n[n.length-1] = { role: "assistant", content: reply }; return n; });
       } else if (res.body) {
+        if (!res.ok) {
+          throw new Error(`Engine error (${res.status})`);
+        }
         const reader = res.body.getReader();
         const dec = new TextDecoder();
         while (true) {
@@ -1115,8 +1133,9 @@ function DrillDown({ simId, state }: { simId: string; state: SimulationState }) 
           }
         }
       }
-    } catch {
-      setMsgs(prev => { const n = [...prev]; n[n.length-1] = { role: "assistant", content: "Error reaching the engine." }; return n; });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error reaching the engine.";
+      setMsgs(prev => { const n = [...prev]; n[n.length-1] = { role: "assistant", content: `⚠ ${msg}` }; return n; });
     } finally { setLoading(false); }
   }, [input, loading, simId]);
 
@@ -1125,8 +1144,8 @@ function DrillDown({ simId, state }: { simId: string; state: SimulationState }) 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
         {msgs.length === 0 && (
           <div className="text-center py-12">
-            <div className="text-zinc-700 text-sm">Ask anything about this simulation</div>
-            <div className="text-zinc-800 text-[11px] mt-1">e.g. &quot;What&apos;s the most likely 5-year outcome?&quot;</div>
+            <div className="text-zinc-300 text-sm font-medium">Ask anything about this simulation</div>
+            <div className="text-zinc-400 text-[11px] mt-1">e.g. &quot;What&apos;s the most likely 5-year outcome?&quot;</div>
           </div>
         )}
         {msgs.map((m, i) => (
@@ -1149,7 +1168,7 @@ function DrillDown({ simId, state }: { simId: string; state: SimulationState }) 
           <input value={input} onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
             placeholder="Ask the engine…"
-            className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-700 focus:outline-none focus:border-[#7c5cfc]/40 transition-colors" />
+            className="flex-1 bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-2.5 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-[#7c5cfc]/40 transition-colors" />
           <button onClick={send} disabled={loading || !input.trim()}
             className="px-4 py-2.5 rounded-xl bg-[#7c5cfc]/20 border border-[#7c5cfc]/30 text-[#7c5cfc] text-sm font-medium hover:bg-[#7c5cfc]/30 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
             {loading ? "…" : "Send"}
@@ -1171,10 +1190,10 @@ function Sources({ state }: { state: SimulationState }) {
     <div className="border-t border-white/[0.04]">
       <button onClick={() => setOpen(o => !o)}
         className="w-full flex items-center gap-2 px-6 py-3 hover:bg-white/[0.02] transition-colors text-left">
-        <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">Sources</span>
-        <span className="text-[9px] font-mono text-zinc-700 ml-1">({sources.length})</span>
+        <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">Sources</span>
+        <span className="text-[9px] font-mono text-zinc-400 ml-1">({sources.length})</span>
         <motion.svg animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}
-          className="w-3 h-3 text-zinc-700 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          className="w-3 h-3 text-zinc-400 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </motion.svg>
       </button>
@@ -1186,11 +1205,11 @@ function Sources({ state }: { state: SimulationState }) {
             <div className="px-6 pb-4 space-y-2">
               {sources.map((s, i) => (
                 <div key={i} className="flex gap-3 items-start">
-                  <span className="text-[9px] font-mono text-zinc-700 shrink-0 mt-0.5">{String(i+1).padStart(2,"0")}</span>
+                  <span className="text-[9px] font-mono text-zinc-400 shrink-0 mt-0.5">{String(i+1).padStart(2,"0")}</span>
                   <div className="min-w-0">
                     <a href={s.url} target="_blank" rel="noopener noreferrer"
                       className="text-[11px] text-zinc-400 hover:text-zinc-200 transition-colors truncate block">{s.title}</a>
-                    {s.snippet && <p className="text-[10px] text-zinc-700 mt-0.5 line-clamp-2">{s.snippet}</p>}
+                    {s.snippet && <p className="text-[10px] text-zinc-400 mt-0.5 line-clamp-2">{s.snippet}</p>}
                   </div>
                 </div>
               ))}
@@ -1266,20 +1285,79 @@ function ReportView({ state, simId }: { state: SimulationState; simId: string })
 export function SimulationDashboard({ simulationId }: { simulationId: string }) {
   const [state, setState] = useState<SimulationState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<"map" | "intel">("intel");
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isByokOpen, setIsByokOpen] = useState(false);
   const esRef = useRef<EventSource | null>(null);
 
   /* Poll / stream state */
   useEffect(() => {
     let cancelled = false;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let retryCount = 0;
+
+    // Immediately initialize state from localStorage if available
+    try {
+      if (typeof window !== "undefined") {
+        const cached = localStorage.getItem(`counterfact_sim_${simulationId}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed?.id === simulationId) {
+            setState(parsed);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to read local simulation state:", e);
+    }
 
     async function load() {
       try {
         const res = await fetch(`/api/simulations/${simulationId}`);
-        if (!res.ok) throw new Error(`${res.status}`);
+        if (!res.ok) {
+          if (res.status === 404) {
+            // Check if we have local state to sync with server container
+            const localRaw = typeof window !== "undefined" ? localStorage.getItem(`counterfact_sim_${simulationId}`) : null;
+            if (localRaw) {
+              try {
+                const localState = JSON.parse(localRaw);
+                if (localState?.id === simulationId) {
+                  if (!cancelled) setState(localState);
+                  // Attempt server sync in background to warm container
+                  fetch(`/api/simulations/${simulationId}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ state: localState }),
+                  }).catch(() => {});
+                  return; // Don't throw or set error!
+                }
+              } catch {}
+            }
+            // If no local state and retries remain, wait and retry
+            if (retryCount < 8) {
+              retryCount++;
+              setTimeout(() => {
+                if (!cancelled) load();
+              }, 2000);
+              return;
+            }
+          }
+          throw new Error(`${res.status}`);
+        }
         const data: SimulationState = await res.json();
-        if (!cancelled) setState(data);
+        if (!cancelled && data?.id) {
+          setState(data);
+          try {
+            localStorage.setItem(`counterfact_sim_${simulationId}`, JSON.stringify(data));
+          } catch {}
+        }
       } catch (e) {
-        if (!cancelled) setError(String(e));
+        if (!cancelled) {
+          setState((curr) => {
+            if (!curr) setError(String(e));
+            return curr;
+          });
+        }
       }
     }
 
@@ -1291,15 +1369,50 @@ export function SimulationDashboard({ simulationId }: { simulationId: string }) 
     es.onmessage = (e) => {
       try {
         const data: SimulationState = JSON.parse(e.data);
-        // stream sends raw state object
-        if (data?.id && !cancelled) setState(data);
+        if (data?.id && !cancelled) {
+          setState(data);
+          try {
+            localStorage.setItem(`counterfact_sim_${simulationId}`, JSON.stringify(data));
+          } catch {}
+        }
       } catch { /* skip */ }
     };
     es.addEventListener("close", () => es.close());
-    es.onerror = () => { es.close(); };
+    es.onerror = () => {
+      // Don't crash on SSE close, polling fallback takes over
+      es.close();
+    };
+
+    // Resilient polling fallback every 3s
+    pollInterval = setInterval(async () => {
+      if (cancelled) return;
+      try {
+        const res = await fetch(`/api/simulations/${simulationId}`);
+        if (res.ok) {
+          const data: SimulationState = await res.json();
+          if (data?.id && !cancelled) {
+            setState(data);
+            try {
+              localStorage.setItem(`counterfact_sim_${simulationId}`, JSON.stringify(data));
+            } catch {}
+            if (
+              data.status === "COMPLETE" ||
+              data.status === "PARTIAL" ||
+              data.status === "FAILED" ||
+              data.safetyResult?.status === "BLOCKED"
+            ) {
+              if (pollInterval) clearInterval(pollInterval);
+            }
+          }
+        }
+      } catch {
+        // Skip polling errors
+      }
+    }, 3000);
 
     return () => {
       cancelled = true;
+      if (pollInterval) clearInterval(pollInterval);
       es.close();
       esRef.current = null;
     };
@@ -1308,17 +1421,19 @@ export function SimulationDashboard({ simulationId }: { simulationId: string }) 
   /* ── Loading ── */
   if (!state && !error) {
     return (
-      <div className="fixed inset-0 bg-[#030306] flex items-center justify-center z-50">
+      <div className="flex-1 min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-6 bg-[#030306]">
         <div className="space-y-4 text-center">
           <div className="relative w-12 h-12 mx-auto">
-            <motion.div className="absolute inset-0 rounded-full border border-[#7c5cfc]/30"
+            <motion.div
+              className="absolute inset-0 rounded-full border border-[#7c5cfc]/30"
               animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity }} />
+              transition={{ duration: 2, repeat: Infinity }}
+            />
             <div className="absolute inset-0 rounded-full border border-[#7c5cfc]/60 flex items-center justify-center">
               <div className="w-2 h-2 rounded-full bg-[#7c5cfc] animate-pulse" />
             </div>
           </div>
-          <p className="text-[11px] font-mono text-zinc-600">Loading simulation…</p>
+          <p className="text-xs font-mono text-zinc-400">Loading simulation…</p>
         </div>
       </div>
     );
@@ -1327,11 +1442,15 @@ export function SimulationDashboard({ simulationId }: { simulationId: string }) 
   /* ── Error ── */
   if (error || !state) {
     return (
-      <div className="fixed inset-0 bg-[#030306] flex items-center justify-center z-50">
-        <div className="text-center space-y-3">
-          <div className="text-zinc-600 text-sm">Failed to load simulation</div>
-          <div className="text-zinc-700 text-[11px] font-mono">{error}</div>
-          <Link href="/" className="text-[#7c5cfc] text-sm hover:underline">← Back</Link>
+      <div className="flex-1 min-h-[calc(100vh-3.5rem)] flex items-center justify-center p-6 bg-[#030306]">
+        <div className="text-center space-y-3 max-w-md p-6 rounded-2xl glass border border-white/10 shadow-xl">
+          <div className="text-red-400 text-sm font-semibold">Failed to load simulation</div>
+          <div className="text-zinc-400 text-xs font-mono break-all">{error}</div>
+          <div className="pt-2">
+            <Link href="/" className="text-[#7c5cfc] hover:text-[#9b82fd] text-xs font-mono transition-colors">
+              ← Return to Simulations
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -1341,9 +1460,13 @@ export function SimulationDashboard({ simulationId }: { simulationId: string }) 
     ? Object.values(state.agentStatus).some(s => s === "ACTIVE" || s === "DISPATCHED" || s === "PENDING")
     : false;
 
+  const isFailedOrBlocked =
+    state.status === "FAILED" ||
+    state.safetyResult?.status === "BLOCKED";
+
   // Show progress if actively running OR if agents exist but synthesis not yet done
   const hasAgents = (state.activeAgents?.length ?? 0) > 0;
-  const showProgress = isRunning || (hasAgents && !state.synthesis);
+  const showProgress = !isFailedOrBlocked && (isRunning || (hasAgents && !state.synthesis));
 
   const completedDomains = state.agentStatus
     ? Object.values(state.agentStatus).filter(s => s === "COMPLETE").length
@@ -1351,78 +1474,216 @@ export function SimulationDashboard({ simulationId }: { simulationId: string }) 
   const totalDomains = state.activeAgents?.length ?? 0;
 
   return (
-    /* Fixed full-viewport container — escapes root layout max-w-5xl */
-    <div className="fixed inset-0 flex bg-[#030306] z-[60]" style={{ top: "56px" }}>
-
-      {/* ── LEFT PANEL: Map (sticky full-height) ── */}
-      <div className="relative flex-shrink-0 w-[55%] h-full border-r border-white/[0.04]">
-        <ImpactMap state={state} />
-
-        {/* Scenario label overlay at bottom of map — above region pills */}
-        <div className="absolute bottom-14 left-4 right-20 z-10 pointer-events-none">
-          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-black/60 border border-white/[0.05] backdrop-blur-2xl max-w-full">
-            <div className="w-1 h-1 rounded-full bg-[#7c5cfc] shrink-0" />
-            <p className="text-[10px] text-zinc-500 font-mono truncate">
-              {state.scenario.split(/[.!?]/)[0].trim().slice(0, 120)}
-            </p>
-          </div>
+    <div className="flex-1 w-full min-h-[calc(100vh-3.5rem)] h-[calc(100vh-3.5rem)] flex flex-col bg-[#030306] overflow-hidden relative">
+      {/* ── Mobile / Tablet Segmented View Switcher (< lg) ── */}
+      <div className="lg:hidden shrink-0 flex items-center justify-center p-2.5 bg-[#060609] border-b border-white/[0.06] z-20">
+        <div className="flex items-center p-1 rounded-xl bg-black/50 border border-white/10 w-full max-w-sm">
+          <button
+            type="button"
+            onClick={() => {
+              setMobileView("map");
+              setTimeout(() => window.dispatchEvent(new Event("resize")), 80);
+            }}
+            className={`flex-1 py-1.5 px-3 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-2 ${
+              mobileView === "map"
+                ? "bg-[#7c5cfc]/25 text-white border border-[#7c5cfc]/40 shadow-sm"
+                : "text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            <span>🗺️</span>
+            <span>Map View</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileView("intel")}
+            className={`flex-1 py-1.5 px-3 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-2 ${
+              mobileView === "intel"
+                ? "bg-[#7c5cfc]/25 text-white border border-[#7c5cfc]/40 shadow-sm"
+                : "text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            <span>📋</span>
+            <span>Intelligence Dossier</span>
+          </button>
         </div>
       </div>
 
-      {/* ── RIGHT PANEL: Intel (scrollable) ── */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+      {/* ── Main 2-Panel Layout: Side-by-side on lg+, segmented on mobile ── */}
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0 w-full overflow-hidden">
+        {/* ── LEFT PANEL: Map (sticky full-height on desktop) ── */}
+        <div
+          className={`relative flex-shrink-0 lg:w-[55%] h-full border-r border-white/[0.04] ${
+            mobileView === "map" ? "flex flex-1 w-full" : "hidden lg:flex"
+          }`}
+        >
+          <ImpactMap state={state} />
 
-        {/* Header */}
-        <div className="shrink-0 px-6 py-4 border-b border-white/[0.05] bg-[#030306]/80 backdrop-blur-sm">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <Link href="/" className="text-zinc-700 hover:text-zinc-400 transition-colors">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-                  </svg>
-                </Link>
-                <span className="text-[9px] font-mono text-zinc-700 uppercase tracking-widest">Simulation</span>
-                <span className="text-[9px] font-mono text-zinc-800">{simulationId.slice(0, 8)}</span>
-              </div>
-              <h1 className="text-sm font-medium text-zinc-200 leading-snug line-clamp-2">
-                {state.scenario.split(/[.!?]/)[0].trim().slice(0, 200)}
-              </h1>
+          {/* Scenario label overlay at bottom of map — above region pills */}
+          <div className="absolute bottom-14 left-4 right-20 z-10 pointer-events-none">
+            <div className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-black/70 border border-white/[0.08] backdrop-blur-2xl max-w-full shadow-lg">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#7c5cfc] shrink-0" />
+              <p className="text-[10px] text-zinc-300 font-mono truncate">
+                {state.scenario.split(/[.!?]/)[0].trim().slice(0, 120)}
+              </p>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
-              {state.synthesis && <ConfidenceLabel level={state.synthesis.overallConfidence} />}
-              {showProgress && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#7c5cfc]/10 border border-[#7c5cfc]/20">
-                  <motion.div className="w-1.5 h-1.5 rounded-full bg-[#7c5cfc]"
-                    animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.2, repeat: Infinity }} />
-                  <span className="text-[9px] font-mono text-[#7c5cfc]">
-                    {completedDomains}/{totalDomains}
-                  </span>
+          </div>
+        </div>
+
+        {/* ── RIGHT PANEL: Intel (scrollable) ── */}
+        <div
+          className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden ${
+            mobileView === "intel" ? "flex w-full" : "hidden lg:flex"
+          }`}
+        >
+          {/* Header */}
+          <div className="shrink-0 px-4 sm:px-6 py-4 border-b border-white/[0.05] bg-[#030306]/80 backdrop-blur-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <Link href="/" className="text-zinc-400 hover:text-zinc-200 transition-colors" title="Back to simulations">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                    </svg>
+                  </Link>
+                  <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest">Simulation</span>
+                  <span className="text-[9px] font-mono text-zinc-500">{simulationId.slice(0, 8)}</span>
                 </div>
-              )}
+                <h1 className="text-sm font-medium text-zinc-100 leading-snug line-clamp-2">
+                  {state.scenario.split(/[.!?]/)[0].trim().slice(0, 200)}
+                </h1>
+              </div>
+
+              <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+                {state.synthesis && <ConfidenceLabel level={state.synthesis.overallConfidence} />}
+                {showProgress && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#7c5cfc]/10 border border-[#7c5cfc]/20">
+                    <motion.div
+                      className="w-1.5 h-1.5 rounded-full bg-[#7c5cfc]"
+                      animate={{ opacity: [1, 0.3, 1] }}
+                      transition={{ duration: 1.2, repeat: Infinity }}
+                    />
+                    <span className="text-[9px] font-mono text-[#7c5cfc]">
+                      {completedDomains}/{totalDomains}
+                    </span>
+                  </div>
+                )}
+
+                {/* Export Dropdown Button */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsExportOpen(!isExportOpen)}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white transition-colors shadow-sm"
+                    aria-label="Export simulation"
+                    aria-expanded={isExportOpen}
+                  >
+                    <svg className="w-3.5 h-3.5 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                    <span>Export</span>
+                    <span className="text-[10px] text-zinc-500">▾</span>
+                  </button>
+
+                  {isExportOpen && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={() => setIsExportOpen(false)} />
+                      <div className="absolute right-0 mt-1.5 w-48 rounded-xl glass-heavy p-1.5 shadow-2xl border border-white/10 z-40 space-y-0.5">
+                        <a
+                          href={`/api/simulations/${simulationId}/export?format=markdown`}
+                          download={`counterfact-simulation-${simulationId.slice(0, 8)}.md`}
+                          onClick={() => setIsExportOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-colors"
+                        >
+                          <span className="text-sm">📄</span>
+                          <div>
+                            <div className="font-medium">Export Markdown</div>
+                            <div className="text-[10px] text-zinc-500">Full analysis report (.md)</div>
+                          </div>
+                        </a>
+                        <a
+                          href={`/api/simulations/${simulationId}/export?format=json`}
+                          download={`counterfact-simulation-${simulationId.slice(0, 8)}.json`}
+                          onClick={() => setIsExportOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-colors"
+                        >
+                          <span className="text-sm">📦</span>
+                          <div>
+                            <div className="font-medium">Export JSON</div>
+                            <div className="text-[10px] text-zinc-500">Raw graph & state data (.json)</div>
+                          </div>
+                        </a>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
+
+            {/* Running progress bar */}
+            {showProgress && (
+              <div className="mt-3 h-px w-full rounded-full bg-white/[0.04] overflow-hidden">
+                <motion.div
+                  className="h-full rounded-full"
+                  animate={{ width: `${totalDomains > 0 ? (completedDomains / totalDomains) * 100 : 5}%` }}
+                  transition={{ duration: 0.8, ease: EASE_OUT }}
+                  style={{ background: "linear-gradient(90deg,#7c5cfc,#60a5fa)" }}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Running progress bar */}
-          {showProgress && (
-            <div className="mt-3 h-px w-full rounded-full bg-white/[0.04] overflow-hidden">
-              <motion.div className="h-full rounded-full"
-                animate={{ width: `${totalDomains > 0 ? (completedDomains / totalDomains) * 100 : 5}%` }}
-                transition={{ duration: 0.8, ease: EASE_OUT }}
-                style={{ background: "linear-gradient(90deg,#7c5cfc,#60a5fa)" }} />
-            </div>
-          )}
-        </div>
+          {/* Content */}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            {isFailedOrBlocked ? (
+              <div className="p-6 sm:p-8 flex flex-col items-center justify-center min-h-[400px] text-center space-y-4 max-w-lg mx-auto">
+                <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 text-xl">
+                  {state.safetyResult?.status === "BLOCKED" ? "🛡️" : "⚠️"}
+                </div>
+                <div className="space-y-1.5 w-full">
+                  <h3 className="text-sm font-semibold text-white">
+                    {state.safetyResult?.status === "BLOCKED"
+                      ? "Simulation Blocked by Safety Guardrails"
+                      : "Simulation Execution Failed"}
+                  </h3>
+                  <p className="text-xs text-zinc-300 font-mono break-words leading-relaxed bg-black/40 border border-white/5 rounded-xl p-3.5 text-left">
+                    {state.safetyResult?.reason || "An error occurred during multi-agent simulation execution."}
+                  </p>
+                </div>
 
-        {/* Content */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          {showProgress ? (
-            <ProgressView state={state} />
-          ) : (
-            <ReportView state={state} simId={simulationId} />
-          )}
+                {state.safetyResult?.disclaimers && state.safetyResult.disclaimers.length > 0 && (
+                  <div className="text-[11px] text-zinc-500 text-left w-full space-y-1">
+                    {state.safetyResult.disclaimers.map((d, i) => (
+                      <p key={i}>• {d}</p>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsByokOpen(true)}
+                    className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium transition-colors flex items-center gap-1.5 shadow-sm"
+                  >
+                    <span>⚙️</span>
+                    <span>Configure Provider (BYOK)</span>
+                  </button>
+                  <Link
+                    href="/"
+                    className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white text-xs font-medium border border-white/10 transition-colors"
+                  >
+                    ← Return to Simulations
+                  </Link>
+                </div>
+              </div>
+            ) : showProgress ? (
+              <ProgressView state={state} />
+            ) : (
+              <ReportView state={state} simId={simulationId} />
+            )}
+          </div>
         </div>
       </div>
+      <BYOKModal isOpen={isByokOpen} onClose={() => setIsByokOpen(false)} />
     </div>
   );
 }

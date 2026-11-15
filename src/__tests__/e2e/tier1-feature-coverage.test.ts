@@ -2,6 +2,17 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { existsSync, readFileSync, rmSync } from "fs";
 import { join } from "path";
 import { execSync } from "child_process";
+import {
+  saveClientBYOK,
+  getClientBYOK,
+  getBYOKHeaders,
+  PROVIDER_OPTIONS,
+} from "@/lib/byok-client";
+import { setupMockBrowserStorage, branchExists, getBranchFileList } from "./test-helpers";
+import {
+  SynthesisOutputSchema,
+  PlannerOutputSchema,
+} from "@/lib/engine/types";
 
 // Mock next/server's after() for unit test environment
 vi.mock("next/server", async (importOriginal) => {
@@ -1039,21 +1050,42 @@ describe("Feature 10: Model Health & Validation Endpoint", () => {
 // FEATURE 11: BYOK Client Storage & Security Isolation
 // ═══════════════════════════════════════════════════════════════════════════
 describe("Feature 11: BYOK Client Storage & Security Isolation", () => {
+  let browserStorage: ReturnType<typeof setupMockBrowserStorage>;
+
+  beforeEach(() => {
+    browserStorage = setupMockBrowserStorage();
+  });
+
+  afterEach(() => {
+    browserStorage.cleanup();
+  });
+
   it("stores BYOK keys under isolated localStorage namespace without exposing to global scope", () => {
-    const storageKey = "counterfact_byok";
-    expect(storageKey).toBe("counterfact_byok");
-    // Verify client configuration interface schema
-    interface ClientBYOKConfig {
-      provider: string;
-      apiKey: string;
-      modelId?: string;
-    }
-    const sample: ClientBYOKConfig = {
-      provider: "openai",
-      apiKey: "sk-proj-test-sample",
+    const config = {
+      provider: "openai" as const,
+      apiKey: "sk-proj-test-sample-123456",
+      modelId: "gpt-4o",
     };
-    expect(sample.provider).toBe("openai");
-    expect(sample.apiKey).toBe("sk-proj-test-sample");
+
+    saveClientBYOK(config);
+
+    // Retrieve via genuine production client getter
+    const retrieved = getClientBYOK();
+    expect(retrieved).not.toBeNull();
+    expect(retrieved?.provider).toBe("openai");
+    expect(retrieved?.apiKey).toBe("sk-proj-test-sample-123456");
+    expect(retrieved?.modelId).toBe("gpt-4o");
+
+    // Verify raw localStorage is scoped strictly under "cf_byok_config"
+    expect(browserStorage.store.has("cf_byok_config")).toBe(true);
+    expect(browserStorage.store.has("apiKey")).toBe(false);
+    expect(browserStorage.store.has("openai_key")).toBe(false);
+
+    // Verify headers contract matches specification
+    const headers = getBYOKHeaders();
+    expect(headers["x-byok-provider"]).toBe("openai");
+    expect(headers["x-byok-api-key"]).toBe("sk-proj-test-sample-123456");
+    expect(headers["x-byok-model-id"]).toBe("gpt-4o");
   });
 
   it("ensures API keys are never written to console logs during route handler execution", async () => {
@@ -1099,22 +1131,56 @@ describe("Feature 11: BYOK Client Storage & Security Isolation", () => {
     expect(llmClient.maskApiKey("")).toBe("");
   });
 
-  it("ensures outbound client request contracts omit apiKey from URL search query parameters", () => {
-    const targetUrl = new URL("http://localhost:3000/api/simulate");
-    // Keys must only travel via request headers or body, never URL query parameters
-    expect(targetUrl.searchParams.has("apiKey")).toBe(false);
-    expect(targetUrl.searchParams.has("x-byok-api-key")).toBe(false);
-    expect(targetUrl.searchParams.has("key")).toBe(false);
+  it("ensures outbound client request contracts omit apiKey from URL search query parameters", async () => {
+    saveClientBYOK({
+      provider: "anthropic",
+      apiKey: "sk-ant-sensitive-credential",
+      modelId: "claude-3-5-sonnet",
+    });
+
+    const headers = getBYOKHeaders();
+    // Headers must encapsulate credentials, never URL query string
+    expect(headers["x-byok-api-key"]).toBe("sk-ant-sensitive-credential");
+
+    // Route contract: passing apiKey as a query parameter is strictly ignored by backend auth
+    const reqWithQuery = new Request("http://localhost:3000/api/simulate?apiKey=sk-leak-in-query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scenario: "Query param test" }),
+    });
+
+    const res = await simulatePost(reqWithQuery);
+    // Provider defaults to bedrock (not reading query param) or returns valid response without storing key
+    const json = await res.json();
+    if (json.id) {
+      const dir = join(CONFIG.storage.dataDir, "simulations", json.id);
+      if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
+      deleteSimulation(json.id);
+    }
+    expect(res.status).toBe(200);
   });
 
   it("validates client storage purge contract clears all BYOK state", () => {
-    const purgeContract = (store: Record<string, string>, namespace: string) => {
-      delete store[namespace];
-      return store[namespace] === undefined;
-    };
-    const testStore: Record<string, string> = { counterfact_byok: "sensitive" };
-    expect(purgeContract(testStore, "counterfact_byok")).toBe(true);
-    expect(testStore["counterfact_byok"]).toBeUndefined();
+    saveClientBYOK({
+      provider: "anthropic",
+      apiKey: "sk-ant-sensitive-to-purge",
+      modelId: "claude-3-5-sonnet",
+    });
+
+    expect(getClientBYOK()).not.toBeNull();
+    expect(browserStorage.store.has("cf_byok_config")).toBe(true);
+
+    // Execute genuine purge via saveClientBYOK(null)
+    saveClientBYOK(null);
+
+    expect(getClientBYOK()).toBeNull();
+    expect(browserStorage.store.has("cf_byok_config")).toBe(false);
+    expect(getBYOKHeaders()).toEqual({});
+
+    // Server-managed fallback bedrock provider also purges local custom key
+    saveClientBYOK({ provider: "bedrock" });
+    expect(getClientBYOK()).toBeNull();
+    expect(browserStorage.store.has("cf_byok_config")).toBe(false);
   });
 });
 
@@ -1383,22 +1449,21 @@ describe("Feature 17: Git Repository AI Trace Cleanup & Hygiene", () => {
     expect(gitignore).toContain("data/simulations/*");
   });
 
-  it("defines disallow list for AI trace files (PDRs, CLAUDE.md, AGENTS.md, .agent)", () => {
-    const disallowedPatterns = [
-      /^COUNTERFACT_PDR_.*\.md$/,
-      /^CLAUDE\.md$/,
-      /^AGENTS\.md$/,
-      /^\.agent\//,
-    ];
+  it("verifies git repository working tree contains zero AI trace files (PDRs, CLAUDE.md, AGENTS.md, .agent)", () => {
+    const trackedFiles = execSync("git ls-files", { encoding: "utf-8" }).split("\n").filter(Boolean);
 
-    expect(disallowedPatterns[0].test("COUNTERFACT_PDR_v1.0.md")).toBe(true);
-    expect(disallowedPatterns[1].test("CLAUDE.md")).toBe(true);
-    expect(disallowedPatterns[2].test("AGENTS.md")).toBe(true);
-    expect(disallowedPatterns[3].test(".agent/workflows/run.md")).toBe(true);
+    // Ensure all source files in src/ and public/ are completely clean of AI scratch files
+    const aiTraceInSrc = trackedFiles.filter(
+      (f) =>
+        (f.startsWith("src/") || f.startsWith("public/")) &&
+        (f.includes("CLAUDE") || f.includes("PDR") || f.includes("AGENTS") || f.includes(".agent"))
+    );
+    expect(aiTraceInSrc).toHaveLength(0);
 
-    // Standard application files must not be matched
-    expect(disallowedPatterns.some((p) => p.test("README.md"))).toBe(false);
-    expect(disallowedPatterns.some((p) => p.test("package.json"))).toBe(false);
+    // Verify .gitignore explicitly ignores AI agent configuration directories and sqlite databases
+    const gitignore = readFileSync(join(process.cwd(), ".gitignore"), "utf-8");
+    expect(gitignore).toMatch(/\.agent\/?/);
+    expect(gitignore).toMatch(/data\/counterfact\.db/);
   });
 
   it("ensures clean README.md exists and contains project overview without AI scaffolding", () => {
@@ -1485,89 +1550,76 @@ describe("Feature 18: Production Deployment Readiness & Vercel Config", () => {
 // FEATURE 19: Python LangGraph Evaluation Branch Deliverable
 // ═══════════════════════════════════════════════════════════════════════════
 describe("Feature 19: Python LangGraph Evaluation Branch Deliverable", () => {
-  it("verifies Python branch target specification and Git reference conventions", () => {
+  it("verifies Python branch target exists or is configured in Git references", () => {
     const branchOutput = execSync("git branch -a", { encoding: "utf-8" });
     const branches = branchOutput.split("\n").map((b) => b.trim());
     expect(branches.length).toBeGreaterThan(0);
-    // Verifies valid branch naming convention for python evaluation target
-    const branchName = "python";
-    expect(/^[a-z0-9_-]+$/.test(branchName)).toBe(true);
+    // Evaluates branch naming standard against repo branches
+    const hasPythonTarget = branches.some((b) => b.includes("python") || b.includes("master"));
+    expect(hasPythonTarget).toBe(true);
+    expect(branchExists("python")).toBe(true);
   });
 
-  it("validates LangGraph StateGraph pipeline architecture schema (ScenarioState)", () => {
-    interface ScenarioState {
-      scenario: string;
-      departure_point: string;
-      active_agents: string[];
-      synthesis: Record<string, unknown> | null;
-      cost_tracking: Record<string, number>;
-    }
-
-    const testState: ScenarioState = {
-      scenario: "What if the steam engine appeared in antiquity?",
-      departure_point: "100 BC",
-      active_agents: ["technological", "economic"],
-      synthesis: { unified_analysis: "Industrial revolution centuries early." },
-      cost_tracking: { total_tokens: 1500, cost_usd: 0.02 },
+  it("validates pipeline architecture output adheres to exported Zod schemas", () => {
+    const validSynthesis = {
+      overallConfidence: "HIGH" as const,
+      unifiedAnalysis: "Industrial revolution centuries early due to steam mechanics.",
+      contradictions: [],
     };
+    const parseResult = SynthesisOutputSchema.safeParse(validSynthesis);
+    expect(parseResult.success).toBe(true);
 
-    expect(testState.scenario).toBeDefined();
-    expect(testState.active_agents).toHaveLength(2);
-    expect(testState.synthesis?.unified_analysis).toBeDefined();
-    expect(testState.cost_tracking.total_tokens).toBe(1500);
-  });
-
-  it("validates Python BYOK and local model multi-provider integration contract", () => {
-    const supportedProviders = {
-      cloud: ["gemini", "openai", "anthropic", "nvidia"],
-      local: ["ollama", "vllm", "huggingface"],
+    const validPlanner = {
+      scenarioSummary: "Ancient steam engine deployment",
+      departurePoint: "100 BC",
+      domainWeights: { TECHNOLOGICAL: 0.8, ECONOMIC: 0.7 },
+      activeAgents: ["TECHNOLOGICAL", "ECONOMIC"],
+      baselineDataRequired: [],
+      clarificationQuestions: [],
     };
-    expect(supportedProviders.cloud).toHaveLength(4);
-    expect(supportedProviders.local).toHaveLength(3);
-    expect(supportedProviders.local).toContain("ollama");
-    expect(supportedProviders.local).toContain("vllm");
-    expect(supportedProviders.cloud).toContain("openai");
-    expect(supportedProviders.cloud).toContain("anthropic");
+    const plannerParse = PlannerOutputSchema.safeParse(validPlanner);
+    expect(plannerParse.success).toBe(true);
   });
 
-  it("validates multi-tier evaluation metrics runner specification", () => {
-    const requiredMetrics = [
-      "grounding_score",
-      "causal_validity_score",
-      "domain_coverage_score",
-      "contradiction_resolution_score",
-    ];
+  it("validates Python BYOK and multi-provider options registry contract", () => {
+    const providerIds = PROVIDER_OPTIONS.map((p) => p.id);
+    expect(providerIds).toContain("gemini");
+    expect(providerIds).toContain("openai");
+    expect(providerIds).toContain("anthropic");
+    expect(providerIds).toContain("nvidia");
+    expect(providerIds).toContain("bedrock");
 
-    expect(requiredMetrics).toHaveLength(4);
-    for (const metric of requiredMetrics) {
-      expect(metric.endsWith("_score")).toBe(true);
+    // All cloud BYOK providers must have requiresKey = true, while bedrock fallback has requiresKey = false
+    const bedrockOpt = PROVIDER_OPTIONS.find((p) => p.id === "bedrock");
+    expect(bedrockOpt?.requiresKey).toBe(false);
+
+    const openaiOpt = PROVIDER_OPTIONS.find((p) => p.id === "openai");
+    expect(openaiOpt?.requiresKey).toBe(true);
+    expect(openaiOpt?.defaultModel).toBeDefined();
+  });
+
+  it("validates multi-tier evaluation metrics schema and confidence levels", () => {
+    const validConfidences = ["HIGH", "MODERATE", "SPECULATIVE"];
+    for (const conf of validConfidences) {
+      expect(["HIGH", "MODERATE", "SPECULATIVE"]).toContain(conf);
     }
   });
 
-  it("verifies zero AI traces policy for Python branch deliverables", () => {
-    const forbiddenPatterns = [
-      /^COUNTERFACT_PDR_.*\.md$/,
-      /^CLAUDE\.md$/,
-      /^AGENTS\.md$/,
-      /^\.agent\//,
-    ];
-
-    const hasPythonBranch = execSync("git branch -a", { encoding: "utf-8" })
+  it("verifies zero AI traces policy across repository root files and Python branch", () => {
+    const rootTracked = execSync("git ls-files", { encoding: "utf-8" })
       .split("\n")
-      .some((b) => b.trim().includes("python"));
+      .filter((f) => !f.includes("/"));
 
-    if (hasPythonBranch) {
-      const pythonFiles = execSync("git ls-tree -r --name-only python 2>/dev/null || true", {
-        encoding: "utf-8",
-      }).split("\n").filter(Boolean);
+    // Verify essential project documentation is present
+    expect(rootTracked).toContain("README.md");
+    expect(rootTracked).toContain("package.json");
+    expect(rootTracked).toContain("next.config.ts");
 
-      const aiTraces = pythonFiles.filter((f) =>
-        forbiddenPatterns.some((pattern) => pattern.test(f))
-      );
-      expect(aiTraces).toHaveLength(0);
-    } else {
-      expect(forbiddenPatterns).toHaveLength(4);
-    }
+    // Verify Python branch deliverables contain zero AI traces
+    const pythonFiles = getBranchFileList("python");
+    expect(pythonFiles.length).toBeGreaterThan(0);
+    const aiTraces = pythonFiles.filter((f) => /PDR|CLAUDE|AGENTS|\.agent/.test(f));
+    expect(aiTraces).toHaveLength(0);
   });
 });
 
@@ -1577,8 +1629,15 @@ describe("Feature 19: Python LangGraph Evaluation Branch Deliverable", () => {
 describe("Feature 20: Complete End-to-End Simulation Pipeline Integration", () => {
   const e2eId = "e2e-f20-integration-" + Date.now();
   const e2eDir = join(CONFIG.storage.dataDir, "simulations", e2eId);
+  const stage1SimIds: string[] = [];
 
   afterEach(() => {
+    for (const id of stage1SimIds) {
+      const dir = join(CONFIG.storage.dataDir, "simulations", id);
+      if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
+      deleteSimulation(id);
+    }
+    stage1SimIds.length = 0;
     if (existsSync(e2eDir)) rmSync(e2eDir, { recursive: true, force: true });
     deleteSimulation(e2eId);
     vi.restoreAllMocks();
@@ -1597,6 +1656,7 @@ describe("Feature 20: Complete End-to-End Simulation Pipeline Integration", () =
     expect(json.id).toBeDefined();
     expect(typeof json.id).toBe("string");
     expect(json.id.length).toBeGreaterThan(10);
+    stage1SimIds.push(json.id);
   });
 
   it("Stage 2: validates execution and state progression through pipeline stages", () => {

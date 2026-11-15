@@ -378,19 +378,35 @@ async function openRouterInvoke(
   }
   messages.push({ role: "user", content: userMessage });
 
-  const completion = await client.chat.completions.create({
-    model: modelId,
-    messages,
-    max_tokens: options.maxTokens ?? 4096,
-    temperature: options.temperature ?? 0.3,
-  });
+  try {
+    const completion = await client.chat.completions.create({
+      model: modelId,
+      messages,
+      max_tokens: options.maxTokens ?? 4096,
+      temperature: options.temperature ?? 0.3,
+    });
 
-  const choice = completion.choices?.[0];
-  return {
-    content: choice?.message?.content ?? "",
-    inputTokens: completion.usage?.prompt_tokens ?? 0,
-    outputTokens: completion.usage?.completion_tokens ?? 0,
-  };
+    const choice = completion.choices?.[0];
+    return {
+      content: choice?.message?.content ?? "",
+      inputTokens: completion.usage?.prompt_tokens ?? 0,
+      outputTokens: completion.usage?.completion_tokens ?? 0,
+    };
+  } catch (err: unknown) {
+    const status = (err as { status?: number })?.status;
+    const msg = (err as Error)?.message || "";
+    if (status === 403 || msg.includes("403")) {
+      throw new Error(
+        `OpenRouter 403 Forbidden: Model '${modelId}' is restricted, gated, or requires special permissions. Please select a recommended model such as 'google/gemini-2.0-flash-exp:free' or 'anthropic/claude-3.5-sonnet' in Settings. (${msg})`
+      );
+    }
+    if (status === 401 || msg.includes("401")) {
+      throw new Error(
+        `OpenRouter 401 Unauthorized: Invalid API key. Please check your OpenRouter API key in Settings.`
+      );
+    }
+    throw err;
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
