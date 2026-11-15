@@ -1636,19 +1636,43 @@ export function SimulationDashboard({ simulationId }: { simulationId: string }) 
           <div className="flex-1 min-h-0 overflow-hidden">
             {isFailedOrBlocked ? (
               <div className="p-6 sm:p-8 flex flex-col items-center justify-center min-h-[400px] text-center space-y-4 max-w-lg mx-auto">
-                <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 text-xl">
-                  {state.safetyResult?.status === "BLOCKED" ? "🛡️" : "⚠️"}
-                </div>
-                <div className="space-y-1.5 w-full">
-                  <h3 className="text-sm font-semibold text-white">
-                    {state.safetyResult?.status === "BLOCKED"
-                      ? "Simulation Blocked by Safety Guardrails"
-                      : "Simulation Execution Failed"}
-                  </h3>
-                  <p className="text-xs text-zinc-300 font-mono break-words leading-relaxed bg-black/40 border border-white/5 rounded-xl p-3.5 text-left">
-                    {state.safetyResult?.reason || "An error occurred during multi-agent simulation execution."}
-                  </p>
-                </div>
+                {(() => {
+                  const reason = state.safetyResult?.reason || "";
+                  const isActualSafetyBlock =
+                    state.safetyResult?.status === "BLOCKED" &&
+                    !reason.includes("Simulation error") &&
+                    !reason.includes("Provider Execution Error") &&
+                    !reason.includes("security token");
+                  const isSecurityTokenError =
+                    reason.includes("security token") ||
+                    reason.includes("credentials") ||
+                    reason.includes("Could not load credentials");
+
+                  return (
+                    <>
+                      <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 text-xl">
+                        {isActualSafetyBlock ? "🛡️" : "⚠️"}
+                      </div>
+                      <div className="space-y-1.5 w-full">
+                        <h3 className="text-sm font-semibold text-white">
+                          {isActualSafetyBlock
+                            ? "Simulation Blocked by Safety Guardrails"
+                            : isSecurityTokenError
+                            ? "Provider Authentication Required"
+                            : "Simulation Execution Failed"}
+                        </h3>
+                        <p className="text-xs text-zinc-300 font-mono break-words leading-relaxed bg-black/40 border border-white/5 rounded-xl p-3.5 text-left">
+                          {reason || "An error occurred during multi-agent simulation execution."}
+                        </p>
+                        {isSecurityTokenError && (
+                          <div className="text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-left leading-relaxed">
+                            💡 <strong>Tip:</strong> You are currently using <em>Server Default (AWS Bedrock)</em>, which requires AWS credentials. To run locally with zero credentials, click <strong>Configure Provider (BYOK)</strong> below and select <strong>Apple Foundation (On-Device)</strong>.
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
 
                 {state.safetyResult?.disclaimers && state.safetyResult.disclaimers.length > 0 && (
                   <div className="text-[11px] text-zinc-500 text-left w-full space-y-1">

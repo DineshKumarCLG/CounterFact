@@ -218,11 +218,14 @@ export async function POST(request: Request) {
         console.error("Simulation failed:", err);
         mutateState(id, (s) => {
           s.status = "FAILED";
-          s.safetyResult = {
-            status: "BLOCKED",
-            reason: `Simulation error: ${err instanceof Error ? err.message : "Unknown error"}`,
-            disclaimers: [],
-          };
+          const errMsg = err instanceof Error ? err.message : "Unknown error";
+          if (!s.safetyResult || s.safetyResult.status !== "BLOCKED") {
+            s.safetyResult = {
+              status: "ALLOWED",
+              reason: `Provider Execution Error: ${errMsg}`,
+              disclaimers: [],
+            };
+          }
         });
       }
     });
